@@ -8,8 +8,8 @@ class ElasticEDRClient:
     def __init__(
         self,
     ):
-        self.url: str = "https://datayard-serverless-bb49d6.kb.us-east-1.aws.elastic.cloud/api/"
-        self.API_key: str = "RFphTjA1VUJRaWZVTTF1dEZYY046Uk54cHVyVWpxNTkyVXpDZTBLV2p5dw=="
+        self.url: str = ""#insert URL
+        self.API_key: str = ""#insert api key
         
         self.params: dict = {
         "per_page": 100,  
