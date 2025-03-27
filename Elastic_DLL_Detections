@@ -1,0 +1,1411 @@
+Rules Found: 18
+Name: Unsigned DLL Loaded by a Trusted Process
+	description: 
+		     Identifies digitally signed (trusted) processes
+		     loading unsigned DLLs. Attackers may plant their payloads into
+		     the application folder and invoke the legitimate application to
+		     execute the payload, masking actions they perform under a
+		     legitimate, trusted, and potentially elevated system or
+		     software process.
+	query: 
+		     library where host.os.type == "windows" and
+		     (dll.Ext.relative_file_creation_time <= 500 or
+		     dll.Ext.relative_file_name_modify_time <= 500 or
+		     dll.Ext.device.product_id : ("Virtual DVD-ROM", "Virtual
+		     Disk")) and dll.hash.sha256 != null and
+		     process.code_signature.status :"trusted" and not
+		     dll.code_signature.status : ("trusted", "errorExpired",
+		     "errorCode_endpoint*") and     /* DLL loaded from the
+		     process.executable current directory */
+		     endswith~(substring(dll.path, 0, length(dll.path) -
+		     (length(dll.name) + 1)), substring(process.executable, 0,
+		     length(process.executable) - (length(process.name) + 1)))
+		     and not user.id : "S-1-5-18" and     not dll.hash.sha256 : (
+		     "19588e6a318894abe8094374bee233e666f319de909c69f12a6047b14473e2
+		     99",         "6e8bee250c8cc1b65150522f33794759f5c65f58fff17c5cb
+		     f6422ad68b421d2",         "55de11531dc0e566cb91f26e48d1301a161a
+		     4b8b24abed42304d711412368760",         "56a5148d00c2d9e58415be2
+		     d64eca922a58063fe26d9af1c87084aa383c9058e",         "83ee0ff920
+		     144edb2c2f4ea10130f55443493290886985a63233fa2431e450f9",
+		     "0d0d8f2eaff6b5f75e63d9721d5a0480b30e70792fe0d3a24d76fd3e61b059
+		     82",         "8b6ce3a640e2d6f36b0001be2a1abb765ae51e62c314a1591
+		     1e75138cbb544bb",         "ea02a19dd824cb7d611b8821d1b9e6a07671
+		     4a195d027d1ff918128a64ac5220",         "02a6d001e6dd944738e09b7
+		     20e49dcb1272cb782b870e5ae319d4600bc192225",         "e7714a1d6a
+		     c3f4c4ae22564b9ca301e486f5f42691859c0a687246c47b5cf5c9",
+		     "17f0f709fb7f6190c03b19b6198fd863b6f0d79f46ccfebac6064be747a4cb
+		     3e",         "cb7ab3788d10940df874acd97b1821bbb5ee4a91f3eec1198
+		     2bb5bf7a3c96443",         "c944ee510721a1d30d42227cc3061dfdcbc1
+		     44c952381afcfe4f6e82c5435ffc",         "967189adfbc889fde89aafc
+		     867f7a1f02731f8592cf6fd5a4ace1929213e2e13",         "4a82452674
+		     9790603eb66777f79787128dd282162a3904a4c1135de43b14d029",
+		     "620a7e658af05cc848091b8a639854b9b15700a9061b4a3d078523653133a4
+		     af",         "cb220267fb0116b298bab6a09a764420d630c52026f7d750f
+		     8ffca4818389327",         "0da1f856d92d6b95f10ed8c3f629cd15468c
+		     906de9352fb4ae629139d1412eed",         "e1646c7778c24407a178819
+		     08037a49ecfcb5a980d155212d544302653a3ef62",         "e102c9c5b2
+		     2ceb60dc516ab4124bea8ec8e808b08eec48ea7ac674d13fca82ef",
+		     "c7544e1f9927afdf6e8cd7063020b572e60fe8f00af39227eb831d331df382
+		     25",         "3668c6749db59a6cbc5293d0a4f904f76d6fb5048704449dd
+		     53894916f408a57",         "7705851ba047a8154402aca92621b60be0e0
+		     e9d9b52b19bf8be540305bd53dba",         "b5acf358ff97127eac9ef4c
+		     664a980b937376b5295ef23d77ee338225de10d60",         "394d2d862f
+		     2ddce71f28d9b933b21a7d6c621c80ef28652574f758f77f01f716",
+		     "e958d03db79e9f1d2770c70a5bc24904aa3e2d27a8d5637684cf8166b38908
+		     f2",         "284701380f33a30b25e8eb9822e7f47179238e91d08bd3fb5
+		     a117145de7e0d8d",         "497471497886f18ca16f7facab7d76dc9bfa
+		     dd69deb9c6e4ea9bdc0869a15628",         "739bedcfc8eb860927eb205
+		     7474be5b39518aaaa6703f9f85307a432fa1f236e",         "8f4c72e3c7
+		     de1ab5d894ec7813f65c5298ecafc183f31924b44a427433ffca42",
+		     "1ac4753056179b358132c55ca3086d550849ae30259ba94f334826c2fbf6c5
+		     7e",         "53e8fecd7d4b1b74064eba9bfa6a361d52929f440954931b4
+		     ba65615148bf0ea",         "e9088afd8871dbad5eda47a9d8abf3b08dd2
+		     e17c423ba8a05f9b6ad6751f9b7c",         "ab27eb05130db2f92499234
+		     b69ff97ee6429c7824efcb7324ae3e404e2b405bf",         "5534510085
+		     20a5f0110d84192cba40208fb001c27454f946e85e6fb2e6553292"     )
+
+Name: Compression DLL Loaded by Unusual Process
+	description: 
+		     Identifies the image load of a compression DLL.
+		     Adversaries will often compress and encrypt data in preparation
+		     for exfiltration.
+	query: 
+		     library where host.os.type == "windows" and
+		     event.action == "load" and   dll.name :
+		     ("System.IO.Compression.FileSystem.ni.dll",
+		     "System.IO.Compression.ni.dll") and   not    (     (
+		     process.executable : (         "?:\\Program Files\\*",
+		     "?:\\Program Files (x86)\\*",
+		     "?:\\Windows\\Microsoft.NET\\Framework*\\mscorsvw.exe",
+		     "?:\\Windows\\System32\\sdiagnhost.exe",
+		     "?:\\Windows\\System32\\inetsrv\\w3wp.exe",
+		     "?:\\Windows\\SysWOW64\\inetsrv\\w3wp.exe",
+		     "?:\\ProgramData\\Microsoft\\Windows Defender Advanced Threat
+		     Protection\\DataCollection\\*\\OpenHandleCollector.exe"       )
+		     and process.code_signature.trusted == true     ) or     (
+		     process.name : "NuGet.exe" and process.code_signature.trusted
+		     == true and user.id : ("S-1-5-18", "S-1-5-20")     )   )
+
+Name: WPS Office Exploitation via DLL Hijack
+	description: 
+		     Identifies the load of a remote library by the
+		     WPS Office promecefpluginhost.exe executable. This may indicate
+		     the successful exploitation of CVE-2024-7262 or CVE-2024-7263
+		     via DLL hijack abusing the ksoqing custom protocol handler.
+	query: 
+		     any where host.os.type == "windows" and process.name :
+		     "promecefpluginhost.exe" and (  (event.category == "library"
+		     and   ?dll.path :
+		     ("?:\\Users\\*\\AppData\\Local\\Temp\\wps\\INetCache\\*",
+		     "\\Device\\Mup\\**", "\\\\*")) or    ((event.category ==
+		     "process" and event.action : "Image loaded*") and   ?file.path
+		     :
+		     ("?:\\Users\\*\\AppData\\Local\\Temp\\wps\\INetCache\\*",
+		     "\\Device\\Mup\\**", "\\\\*")) )
+
+Name: Suspicious Antimalware Scan Interface DLL
+	description: 
+		     Identifies the creation of the Antimalware Scan
+		     Interface (AMSI) DLL in an unusual location. This may indicate
+		     an attempt to bypass AMSI by loading a rogue AMSI module
+		     instead of the legit one.
+	query: 
+		     file where host.os.type == "windows" and event.type !=
+		     "deletion" and file.path != null and   file.name : ("amsi.dll",
+		     "amsi") and   not file.path : (
+		     "?:\\$SysReset\\CloudImage\\Package_for_RollupFix*",
+		     "?:\\Windows\\system32\\amsi.dll",
+		     "?:\\Windows\\Syswow64\\amsi.dll",
+		     "?:\\$WINDOWS.~BT\\DUImageSandbox\\*",
+		     "?:\\$WINDOWS.~BT\\NewOS\\Windows\\WinSXS\\*",
+		     "?:\\$WINDOWS.~BT\\NewOS\\Windows\\servicing\\LCU\\*",
+		     "?:\\$WINDOWS.~BT\\Work\\*\\*",     "?:\\$WINDOWS.~BT\\Store\\O
+		     ffline\\File\\C$\\Windows\\SoftwareDistribution\\Download.bak\\
+		     *",     "?:\\Windows\\CbsTemp\\*\\f\\amsi.dll",
+		     "?:\\Windows\\SoftwareDistribution\\Download\\*",
+		     "?:\\Windows\\WinSxS\\amd64_microsoft-antimalware-scan-
+		     interface_*\\amsi.dll"   ) and   not   (     process.executable
+		     : "C:\\Windows\\System32\\wbengine.exe" and     file.path : (
+		     "\\Device\\HarddiskVolume??\\Windows\\system32\\amsi.dll",
+		     "\\Device\\HarddiskVolume??\\Windows\\syswow64\\amsi.dll",
+		     "\\Device\\HarddiskVolume??\\Windows\\WinSxS\\*\\amsi.dll",
+		     "\\\\?\\Volume{*}\\Windows\\WinSxS\\*\\amsi.dll",
+		     "\\\\?\\Volume{*}\\Windows\\system32\\amsi.dll",
+		     "\\\\?\\Volume{*}\\Windows\\syswow64\\amsi.dll"     )   )
+
+Name: Suspicious Print Spooler Point and Print DLL
+	description: 
+		     Detects attempts to exploit a privilege
+		     escalation vulnerability (CVE-2020-1030) related to the print
+		     spooler service. Exploitation involves chaining multiple
+		     primitives to load an arbitrary DLL into the print spooler
+		     process running as SYSTEM.
+	query: 
+		     sequence by host.id with maxspan=30s [registry where
+		     host.os.type == "windows" and  registry.path : (
+		     "HKLM\\SOFTWARE\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Print\\Printers\\*\\SpoolDirectory",
+		     "\\REGISTRY\\MACHINE\\SOFTWARE\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Print\\Printers\\*\\SpoolDirectory"     )
+		     and  registry.data.strings :
+		     "C:\\Windows\\System32\\spool\\drivers\\x64\\4"] [registry
+		     where host.os.type == "windows" and  registry.path : (
+		     "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Print\\
+		     Printers\\*\\CopyFiles\\Payload\\Module",
+		     "\\REGISTRY\\MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentV
+		     ersion\\Print\\Printers\\*\\CopyFiles\\Payload\\Module"     )
+		     and  registry.data.strings :
+		     "C:\\Windows\\System32\\spool\\drivers\\x64\\4\\*"]
+
+Name: Registry Persistence via AppInit DLL
+	description: 
+		     AppInit DLLs are dynamic-link libraries (DLLs)
+		     that are loaded into every process that creates a user
+		     interface (loads user32.dll) on Microsoft Windows operating
+		     systems. The AppInit DLL mechanism is used to load custom code
+		     into user-mode processes, allowing for the customization of the
+		     user interface and the behavior of Windows-based applications.
+		     Attackers who add those DLLs to the registry locations can
+		     execute code with elevated privileges, similar to process
+		     injection, and provide a solid and constant persistence on the
+		     machine.
+	query: 
+		     registry where host.os.type == "windows" and
+		     event.type == "change" and   registry.path : (
+		     "HKLM\\SOFTWARE\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Windows\\AppInit_Dlls",
+		     "HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Windows\\AppInit_Dlls",
+		     "\\REGISTRY\\MACHINE\\SOFTWARE\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Windows\\AppInit_Dlls",
+		     "\\REGISTRY\\MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Windows\\AppInit_Dlls",
+		     "MACHINE\\SOFTWARE\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Windows\\AppInit_Dlls",
+		     "MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows
+		     NT\\CurrentVersion\\Windows\\AppInit_Dlls"   ) and   not
+		     process.executable : (      "?:\\Windows\\System32\\DriverStore
+		     \\FileRepository\\*\\Display.NvContainer\\NVDisplay.Container.e
+		     xe",      "?:\\Windows\\System32\\msiexec.exe",
+		     "?:\\Windows\\SysWOW64\\msiexec.exe",      "?:\\Program
+		     Files\\Commvault\\Base\\cvd.exe",      "?:\\Program
+		     Files\\Commvault\\ContentStore*\\Base\\cvd.exe",
+		     "?:\\Program Files (x86)\\Commvault\\Base\\cvd.exe",
+		     "?:\\Program Files
+		     (x86)\\Commvault\\ContentStore*\\Base\\cvd.exe",
+		     "?:\\Program Files\\NVIDIA
+		     Corporation\\Display.NvContainer\\NVDisplay.Container.exe"   )
+
+Name: Potential DLL Side-Loading via Microsoft Antimalware Service Executable
+	description: 
+		     Identifies a Windows trusted program that is
+		     known to be vulnerable to DLL Search Order Hijacking starting
+		     after being renamed or from a non-standard path. This is
+		     uncommon behavior and may indicate an attempt to evade defenses
+		     via side-loading a malicious DLL within the memory space of one
+		     of those processes.
+	query: 
+		     process where host.os.type == "windows" and event.type
+		     == "start" and (   (process.pe.original_file_name ==
+		     "MsMpEng.exe" and not process.name : "MsMpEng.exe") or
+		     (process.name : "MsMpEng.exe" and not
+		     process.executable : ("?:\\ProgramData\\Microsoft\\Windows
+		     Defender\\*.exe",                               "?:\\Program
+		     Files\\Windows Defender\\*.exe",
+		     "?:\\Program Files (x86)\\Windows Defender\\*.exe",
+		     "?:\\Program Files\\Microsoft Security Client\\*.exe",
+		     "?:\\Program Files (x86)\\Microsoft Security Client\\*.exe")) )
+
+Name: Registry Persistence via AppCert DLL
+	description: 
+		     Detects attempts to maintain persistence by
+		     creating registry keys using AppCert DLLs. AppCert DLLs are
+		     loaded by every process using the common API functions to
+		     create processes.
+	query: 
+		     registry where host.os.type == "windows" and
+		     event.type == "change" and   registry.path : (
+		     "HKLM\\SYSTEM\\*ControlSet*\\Control\\Session
+		     Manager\\AppCertDLLs\\*",
+		     "\\REGISTRY\\MACHINE\\SYSTEM\\*ControlSet*\\Control\\Session
+		     Manager\\AppCertDLLs\\*",
+		     "MACHINE\\SYSTEM\\*ControlSet*\\Control\\Session
+		     Manager\\AppCertDLLs\\*"   )
+
+Name: Unsigned DLL Loaded by Svchost
+	description: 
+		     Identifies an unsigned library created in the
+		     last 5 minutes and subsequently loaded by a shared windows
+		     service (svchost). Adversaries may use this technique to
+		     maintain persistence or run with System privileges.
+	query: 
+		     library where host.os.type == "windows" and
+		     process.executable :
+		     ("?:\\Windows\\System32\\svchost.exe",
+		     "?:\\Windows\\Syswow64\\svchost.exe") and
+		     dll.code_signature.trusted != true and   not
+		     dll.code_signature.status : ("trusted", "errorExpired",
+		     "errorCode_endpoint*") and   dll.hash.sha256 != null and   (
+		     /* DLL created within 5 minutes of the library load event -
+		     compatible with Elastic Endpoint 8.4+ */
+		     dll.Ext.relative_file_creation_time <= 300 or         /*
+		     unusual paths */        dll.path :("?:\\ProgramData\\*",
+		     "?:\\Users\\*",                   "?:\\PerfLogs\\*",
+		     "?:\\Windows\\Tasks\\*",                   "?:\\Intel\\*",
+		     "?:\\AMD\\Temp\\*",
+		     "?:\\Windows\\AppReadiness\\*",
+		     "?:\\Windows\\ServiceState\\*",
+		     "?:\\Windows\\security\\*",
+		     "?:\\Windows\\IdentityCRL\\*",
+		     "?:\\Windows\\Branding\\*",
+		     "?:\\Windows\\csc\\*",
+		     "?:\\Windows\\DigitalLocker\\*",
+		     "?:\\Windows\\en-US\\*",
+		     "?:\\Windows\\wlansvc\\*",
+		     "?:\\Windows\\Prefetch\\*",
+		     "?:\\Windows\\Fonts\\*",
+		     "?:\\Windows\\diagnostics\\*",
+		     "?:\\Windows\\TAPI\\*",
+		     "?:\\Windows\\INF\\*",
+		     "?:\\Windows\\System32\\Speech\\*",
+		     "?:\\windows\\tracing\\*",
+		     "?:\\windows\\IME\\*",
+		     "?:\\Windows\\Performance\\*",
+		     "?:\\windows\\intel\\*",
+		     "?:\\windows\\ms\\*",
+		     "?:\\Windows\\dot3svc\\*",
+		     "?:\\Windows\\panther\\*",
+		     "?:\\Windows\\RemotePackages\\*",
+		     "?:\\Windows\\OCR\\*",
+		     "?:\\Windows\\appcompat\\*",
+		     "?:\\Windows\\apppatch\\*",
+		     "?:\\Windows\\addins\\*",
+		     "?:\\Windows\\Setup\\*",
+		     "?:\\Windows\\Help\\*",
+		     "?:\\Windows\\SKB\\*",                   "?:\\Windows\\Vss\\*",
+		     "?:\\Windows\\servicing\\*",
+		     "?:\\Windows\\CbsTemp\\*",
+		     "?:\\Windows\\Logs\\*",
+		     "?:\\Windows\\WaaS\\*",
+		     "?:\\Windows\\twain_32\\*",
+		     "?:\\Windows\\ShellExperiences\\*",
+		     "?:\\Windows\\ShellComponents\\*",
+		     "?:\\Windows\\PLA\\*",
+		     "?:\\Windows\\Migration\\*",
+		     "?:\\Windows\\debug\\*",
+		     "?:\\Windows\\Cursors\\*",
+		     "?:\\Windows\\Containers\\*",
+		     "?:\\Windows\\Boot\\*",
+		     "?:\\Windows\\bcastdvr\\*",
+		     "?:\\Windows\\TextInput\\*",
+		     "?:\\Windows\\security\\*",
+		     "?:\\Windows\\schemas\\*",
+		     "?:\\Windows\\SchCache\\*",
+		     "?:\\Windows\\Resources\\*",
+		     "?:\\Windows\\rescache\\*",
+		     "?:\\Windows\\Provisioning\\*",
+		     "?:\\Windows\\PrintDialog\\*",
+		     "?:\\Windows\\PolicyDefinitions\\*",
+		     "?:\\Windows\\media\\*",
+		     "?:\\Windows\\Globalization\\*",
+		     "?:\\Windows\\L2Schemas\\*",
+		     "?:\\Windows\\LiveKernelReports\\*",
+		     "?:\\Windows\\ModemLogs\\*",
+		     "?:\\Windows\\ImmersiveControlPanel\\*",
+		     "?:\\$Recycle.Bin\\*")   ) and    not dll.hash.sha256 :
+		     ("3ed33e71641645367442e65dca6dab0d326b22b48ef9a4c2a2488e67383aa
+		     9a6",              "b4db053f6032964df1b254ac44cb995ffaeb4f3ade0
+		     9597670aba4f172cf65e4",              "214c75f678bc596bbe667a3b5
+		     20aaaf09a0e50c364a28ac738a02f867a085eba",              "23aa95b
+		     637a1bf6188b386c21c4e87967ede80242327c55447a5bb70d9439244",
+		     "5050b025909e81ae5481db37beb807a80c52fc6dd30c8aa47c9f7841e2a31b
+		     e7")
+
+Name: Potential Masquerading as VLC DLL
+	description: 
+		     Identifies instances of VLC-related DLLs which
+		     are not signed by the original developer. Attackers may name
+		     their payload as legitimate applications to blend into the
+		     environment, or embedding its malicious code within legitimate
+		     applications to deceive machine learning algorithms by
+		     incorporating authentic and benign code.
+	query: 
+		     library where host.os.type == "windows" and
+		     event.action == "load" and   dll.name : ("libvlc.dll",
+		     "libvlccore.dll", "axvlc.dll") and   not (
+		     dll.code_signature.subject_name : ("VideoLAN",
+		     "716F2E5E-A03A-486B-BC67-9B18474B9D51")     and
+		     dll.code_signature.trusted == true   )
+
+Name: Netsh Helper DLL
+	description: 
+		     Identifies the addition of a Netsh Helper DLL,
+		     netsh.exe supports the addition of these DLLs to extend its
+		     functionality. Attackers may abuse this mechanism to execute
+		     malicious payloads every time the utility is executed, which
+		     can be done by administrators or a scheduled task.
+	query: 
+		     registry where host.os.type == "windows" and
+		     event.type == "change" and   registry.path : (
+		     "HKLM\\Software\\Microsoft\\netsh\\*",
+		     "\\REGISTRY\\MACHINE\\Software\\Microsoft\\netsh\\*",
+		     "MACHINE\\Software\\Microsoft\\netsh\\*"   )
+
+Name: Unsigned DLL loaded by DNS Service
+	description: 
+		     Identifies unusual DLLs loaded by the DNS Server
+		     process, potentially indicating the abuse of the
+		     ServerLevelPluginDll functionality. This can lead to privilege
+		     escalation and remote code execution with SYSTEM privileges.
+	query: 
+		     any where host.os.type == "windows" and event.category
+		     : ("library", "process") and   event.type : ("start", "change")
+		     and event.action : ("load", "Image loaded*") and
+		     process.executable : "?:\\windows\\system32\\dns.exe" and   not
+		     ?dll.code_signature.trusted == true and   not
+		     file.code_signature.status == "Valid"
+
+Name: Untrusted DLL Loaded by Azure AD Sync Service
+	description: 
+		     Identifies the load of a DLL without a valid
+		     code signature by the Azure AD Sync process, which may indicate
+		     an attempt to persist or collect sensitive credentials passing
+		     through the Azure AD synchronization server.
+	query: 
+		     any where host.os.type == "windows" and process.name :
+		     "AzureADConnectAuthenticationAgentService.exe" and (
+		     (event.category == "library" and event.action == "load") or
+		     (event.category == "process" and event.action : "Image
+		     loaded*") ) and  not (?dll.code_signature.trusted == true or
+		     file.code_signature.status == "Valid") and not    (    /*
+		     Elastic defend DLL path */    ?dll.path :
+		     ("?:\\Windows\\assembly\\NativeImages*",
+		     "?:\\Windows\\Microsoft.NET\\*",
+		     "?:\\Windows\\WinSxS\\*",
+		     "?:\\Windows\\System32\\DriverStore\\FileRepository\\*") or
+		     /* Sysmon DLL path is mapped to file.path */    file.path :
+		     ("?:\\Windows\\assembly\\NativeImages*",
+		     "?:\\Windows\\Microsoft.NET\\*",
+		     "?:\\Windows\\WinSxS\\*",
+		     "?:\\Windows\\System32\\DriverStore\\FileRepository\\*")   )
+
+Name: Potential Masquerading as System32 DLL
+	description: 
+		     Identifies suspicious instances of default
+		     system32 DLLs either unsigned or signed with non-MS
+		     certificates. This can potentially indicate the attempt to
+		     masquerade as system DLLs, perform DLL Search Order Hijacking
+		     or backdoor and resign legitimate DLLs.
+	query: 
+		     library where event.action == "load" and
+		     dll.Ext.relative_file_creation_time <= 3600 and     not (
+		     dll.path : (         "?:\\Windows\\System32\\*",
+		     "?:\\Windows\\SysWOW64\\*",
+		     "?:\\Windows\\SystemTemp\\*",
+		     "?:\\$WINDOWS.~BT\\NewOS\\Windows\\WinSxS\\*",
+		     "?:\\$WINDOWS.~BT\\NewOS\\Windows\\System32\\*",
+		     "?:\\$WINDOWS.~BT\\Sources\\*",
+		     "?:\\$WINDOWS.~BT\\Work\\*",         "?:\\Windows\\WinSxS\\*",
+		     "?:\\Windows\\SoftwareDistribution\\Download\\*",
+		     "?:\\Windows\\assembly\\NativeImages_v*"       )     ) and
+		     not (       dll.code_signature.subject_name in (
+		     "Microsoft Windows",         "Microsoft Corporation",
+		     "Microsoft Windows Hardware Abstraction Layer Publisher",
+		     "Microsoft Windows Publisher",         "Microsoft Windows 3rd
+		     party Component",         "Microsoft 3rd Party Application
+		     Component"       ) and dll.code_signature.trusted == true     )
+		     and not dll.code_signature.status : ("errorCode_endpoint*",
+		     "errorUntrustedRoot", "errorChaining") and     dll.name : (
+		     "aadauthhelper.dll", "aadcloudap.dll", "aadjcsp.dll",
+		     "aadtb.dll", "aadwamextension.dll", "aarsvc.dll",
+		     "abovelockapphost.dll", "accessibilitycpl.dll",
+		     "accountaccessor.dll", "accountsrt.dll", "acgenral.dll",
+		     "aclayers.dll", "acledit.dll", "aclui.dll", "acmigration.dll",
+		     "acppage.dll", "acproxy.dll", "acspecfc.dll",
+		     "actioncenter.dll", "actioncentercpl.dll", "actionqueue.dll",
+		     "activationclient.dll", "activeds.dll", "activesynccsp.dll",
+		     "actxprxy.dll", "acwinrt.dll", "acxtrnal.dll",
+		     "adaptivecards.dll", "addressparser.dll", "adhapi.dll",
+		     "adhsvc.dll", "admtmpl.dll", "adprovider.dll", "adrclient.dll",
+		     "adsldp.dll", "adsldpc.dll", "adsmsext.dll", "adsnt.dll",
+		     "adtschema.dll", "advancedemojids.dll", "advapi32.dll",
+		     "advapi32res.dll", "advpack.dll", "aeevts.dll", "aeinv.dll",
+		     "aepic.dll", "ajrouter.dll", "altspace.dll", "amsi.dll",
+		     "amsiproxy.dll", "amstream.dll", "apds.dll",
+		     "aphostclient.dll", "aphostres.dll", "aphostservice.dll",
+		     "apisampling.dll", "apisetschema.dll", "apmon.dll",
+		     "apmonui.dll", "appcontracts.dll", "appextension.dll",
+		     "apphelp.dll", "apphlpdm.dll", "appidapi.dll", "appidsvc.dll",
+		     "appinfo.dll", "appinfoext.dll", "applicationframe.dll",
+		     "applockercsp.dll", "appmgmts.dll", "appmgr.dll", "appmon.dll",
+		     "appointmentapis.dll", "appraiser.dll", "appreadiness.dll",
+		     "apprepapi.dll", "appresolver.dll", "appsruprov.dll",
+		     "appvcatalog.dll", "appvclientps.dll", "appvetwclientres.dll",
+		     "appvintegration.dll", "appvmanifest.dll", "appvpolicy.dll",
+		     "appvpublishing.dll", "appvreporting.dll", "appvscripting.dll",
+		     "appvsentinel.dll", "appvstreamingux.dll", "appvstreammap.dll",
+		     "appvterminator.dll", "appxalluserstore.dll",
+		     "appxpackaging.dll", "appxsip.dll", "appxsysprep.dll",
+		     "archiveint.dll", "asferror.dll", "aspnet_counters.dll",
+		     "asycfilt.dll", "atl.dll", "atlthunk.dll", "atmlib.dll",
+		     "audioeng.dll", "audiohandlers.dll", "audiokse.dll",
+		     "audioses.dll", "audiosrv.dll", "auditcse.dll",
+		     "auditpolcore.dll", "auditpolmsg.dll", "authbroker.dll",
+		     "authbrokerui.dll", "authentication.dll", "authext.dll",
+		     "authfwcfg.dll", "authfwgp.dll", "authfwsnapin.dll",
+		     "authfwwizfwk.dll", "authhostproxy.dll", "authui.dll",
+		     "authz.dll", "autopilot.dll", "autopilotdiag.dll",
+		     "autoplay.dll", "autotimesvc.dll", "avicap32.dll",
+		     "avifil32.dll", "avrt.dll", "axinstsv.dll", "azroles.dll",
+		     "azroleui.dll", "azsqlext.dll", "basecsp.dll", "basesrv.dll",
+		     "batmeter.dll", "bcastdvrbroker.dll", "bcastdvrclient.dll",
+		     "bcastdvrcommon.dll", "bcd.dll", "bcdprov.dll", "bcdsrv.dll",
+		     "bcp47langs.dll", "bcp47mrm.dll", "bcrypt.dll",
+		     "bcryptprimitives.dll", "bdehdcfglib.dll", "bderepair.dll",
+		     "bdesvc.dll", "bdesysprep.dll", "bdeui.dll", "bfe.dll",
+		     "bi.dll", "bidispl.dll", "bindfltapi.dll", "bingasds.dll",
+		     "bingfilterds.dll", "bingmaps.dll", "biocredprov.dll",
+		     "bisrv.dll", "bitlockercsp.dll", "bitsigd.dll", "bitsperf.dll",
+		     "bitsproxy.dll", "biwinrt.dll", "blbevents.dll", "blbres.dll",
+		     "blb_ps.dll", "bluetoothapis.dll", "bnmanager.dll",
+		     "bootmenuux.dll", "bootstr.dll", "bootux.dll", "bootvid.dll",
+		     "bridgeres.dll", "brokerlib.dll", "browcli.dll",
+		     "browserbroker.dll", "browseui.dll", "btagservice.dll",
+		     "bthavctpsvc.dll", "bthavrcp.dll", "bthavrcpappsvc.dll",
+		     "bthci.dll", "bthpanapi.dll", "bthradiomedia.dll",
+		     "bthserv.dll", "bthtelemetry.dll", "btpanui.dll",
+		     "bwcontexthandler.dll", "cabapi.dll", "cabinet.dll",
+		     "cabview.dll", "callbuttons.dll", "cameracaptureui.dll",
+		     "capauthz.dll", "capiprovider.dll", "capisp.dll",
+		     "captureservice.dll", "castingshellext.dll", "castlaunch.dll",
+		     "catsrv.dll", "catsrvps.dll", "catsrvut.dll", "cbdhsvc.dll",
+		     "cca.dll", "cdd.dll", "cdosys.dll", "cdp.dll", "cdprt.dll",
+		     "cdpsvc.dll", "cdpusersvc.dll", "cemapi.dll", "certca.dll",
+		     "certcli.dll", "certcredprovider.dll", "certenc.dll",
+		     "certenroll.dll", "certenrollui.dll", "certmgr.dll",
+		     "certpkicmdlet.dll", "certpoleng.dll", "certprop.dll",
+		     "cewmdm.dll", "cfgbkend.dll", "cfgmgr32.dll",
+		     "cfgspcellular.dll", "cfgsppolicy.dll", "cflapi.dll",
+		     "cfmifs.dll", "cfmifsproxy.dll", "chakra.dll",
+		     "chakradiag.dll", "chakrathunk.dll", "chartv.dll",
+		     "chatapis.dll", "chkwudrv.dll", "chsstrokeds.dll",
+		     "chtbopomofods.dll", "chtcangjieds.dll", "chthkstrokeds.dll",
+		     "chtquickds.dll", "chxapds.dll", "chxdecoder.dll",
+		     "chxhapds.dll", "chxinputrouter.dll", "chxranker.dll",
+		     "ci.dll", "cic.dll", "cimfs.dll", "circoinst.dll", "ciwmi.dll",
+		     "clb.dll", "clbcatq.dll", "cldapi.dll", "cleanpccsp.dll",
+		     "clfsw32.dll", "cliconfg.dll", "clipboardserver.dll",
+		     "clipc.dll", "clipsvc.dll", "clipwinrt.dll", "cloudap.dll",
+		     "cloudidsvc.dll", "clrhost.dll", "clusapi.dll", "cmcfg32.dll",
+		     "cmdext.dll", "cmdial32.dll", "cmgrcspps.dll", "cmifw.dll",
+		     "cmintegrator.dll", "cmlua.dll", "cmpbk32.dll", "cmstplua.dll",
+		     "cmutil.dll", "cngcredui.dll", "cngprovider.dll", "cnvfat.dll",
+		     "cofiredm.dll", "colbact.dll", "colorcnv.dll", "colorui.dll",
+		     "combase.dll", "comcat.dll", "comctl32.dll", "comdlg32.dll",
+		     "coml2.dll", "comppkgsup.dll", "compstui.dll",
+		     "computecore.dll", "computenetwork.dll", "computestorage.dll",
+		     "comrepl.dll", "comres.dll", "comsnap.dll", "comsvcs.dll",
+		     "comuid.dll", "configmanager2.dll", "conhostv1.dll",
+		     "connect.dll", "consentux.dll", "consentuxclient.dll",
+		     "console.dll", "consolelogon.dll", "contactapis.dll",
+		     "container.dll", "coredpus.dll", "coreglobconfig.dll",
+		     "coremas.dll", "coremessaging.dll", "coremmres.dll",
+		     "coreshell.dll", "coreshellapi.dll", "coreuicomponents.dll",
+		     "correngine.dll", "courtesyengine.dll", "cpfilters.dll",
+		     "creddialogbroker.dll", "credprovhelper.dll",
+		     "credprovhost.dll", "credprovs.dll", "credprovslegacy.dll",
+		     "credssp.dll", "credui.dll", "crypt32.dll", "cryptbase.dll",
+		     "cryptcatsvc.dll", "cryptdlg.dll", "cryptdll.dll",
+		     "cryptext.dll", "cryptnet.dll", "cryptngc.dll",
+		     "cryptowinrt.dll", "cryptsp.dll", "cryptsvc.dll",
+		     "crypttpmeksvc.dll", "cryptui.dll", "cryptuiwizard.dll",
+		     "cryptxml.dll", "cscapi.dll", "cscdll.dll", "cscmig.dll",
+		     "cscobj.dll", "cscsvc.dll", "cscui.dll", "csplte.dll",
+		     "cspproxy.dll", "csrsrv.dll", "cxcredprov.dll", "c_g18030.dll",
+		     "c_gsm7.dll", "c_is2022.dll", "c_iscii.dll", "d2d1.dll",
+		     "d3d10.dll", "d3d10core.dll", "d3d10level9.dll",
+		     "d3d10warp.dll", "d3d10_1.dll", "d3d10_1core.dll", "d3d11.dll",
+		     "d3d11on12.dll", "d3d12.dll", "d3d12core.dll", "d3d8thk.dll",
+		     "d3d9.dll", "d3d9on12.dll", "d3dscache.dll", "dab.dll",
+		     "dabapi.dll", "daconn.dll", "dafbth.dll", "dafdnssd.dll",
+		     "dafescl.dll", "dafgip.dll", "dafiot.dll", "dafipp.dll",
+		     "dafmcp.dll", "dafpos.dll", "dafprintprovider.dll",
+		     "dafupnp.dll", "dafwcn.dll", "dafwfdprovider.dll",
+		     "dafwiprov.dll", "dafwsd.dll", "damediamanager.dll",
+		     "damm.dll", "das.dll", "dataclen.dll", "datusage.dll",
+		     "davclnt.dll", "davhlpr.dll", "davsyncprovider.dll",
+		     "daxexec.dll", "dbgcore.dll", "dbgeng.dll", "dbghelp.dll",
+		     "dbgmodel.dll", "dbnetlib.dll", "dbnmpntw.dll", "dciman32.dll",
+		     "dcntel.dll", "dcomp.dll", "ddaclsys.dll", "ddcclaimsapi.dll",
+		     "ddds.dll", "ddisplay.dll", "ddoiproxy.dll", "ddores.dll",
+		     "ddpchunk.dll", "ddptrace.dll", "ddputils.dll", "ddp_ps.dll",
+		     "ddraw.dll", "ddrawex.dll", "defragproxy.dll", "defragres.dll",
+		     "defragsvc.dll", "deploymentcsps.dll", "deskadp.dll",
+		     "deskmon.dll", "desktopshellext.dll", "devenum.dll",
+		     "deviceaccess.dll", "devicecenter.dll", "devicecredential.dll",
+		     "devicepairing.dll", "deviceuxres.dll", "devinv.dll",
+		     "devmgr.dll", "devobj.dll", "devpropmgr.dll",
+		     "devquerybroker.dll", "devrtl.dll", "dfdts.dll", "dfscli.dll",
+		     "dfshim.dll", "dfsshlex.dll", "dggpext.dll",
+		     "dhcpcmonitor.dll", "dhcpcore.dll", "dhcpcore6.dll",
+		     "dhcpcsvc.dll", "dhcpcsvc6.dll", "dhcpsapi.dll", "diagcpl.dll",
+		     "diagnosticlogcsp.dll", "diagperf.dll", "diagsvc.dll",
+		     "diagtrack.dll", "dialclient.dll", "dialserver.dll",
+		     "dictationmanager.dll", "difxapi.dll", "dimsjob.dll",
+		     "dimsroam.dll", "dinput.dll", "dinput8.dll",
+		     "direct2ddesktop.dll", "directml.dll", "discan.dll",
+		     "dismapi.dll", "dispbroker.dll", "dispex.dll", "display.dll",
+		     "displaymanager.dll", "dlnashext.dll", "dmappsres.dll",
+		     "dmcfgutils.dll", "dmcmnutils.dll", "dmcsps.dll", "dmdlgs.dll",
+		     "dmdskmgr.dll", "dmdskres.dll", "dmdskres2.dll",
+		     "dmenrollengine.dll", "dmintf.dll", "dmiso8601utils.dll",
+		     "dmloader.dll", "dmocx.dll", "dmoleaututils.dll",
+		     "dmpushproxy.dll", "dmpushroutercore.dll", "dmrcdecoder.dll",
+		     "dmrserver.dll", "dmsynth.dll", "dmusic.dll", "dmutil.dll",
+		     "dmvdsitf.dll", "dmwappushsvc.dll", "dmwmicsp.dll",
+		     "dmxmlhelputils.dll", "dnsapi.dll", "dnscmmc.dll",
+		     "dnsext.dll", "dnshc.dll", "dnsrslvr.dll", "docprop.dll",
+		     "dolbydecmft.dll", "domgmt.dll", "dosettings.dll", "dosvc.dll",
+		     "dot3api.dll", "dot3cfg.dll", "dot3conn.dll", "dot3dlg.dll",
+		     "dot3gpclnt.dll", "dot3gpui.dll", "dot3hc.dll", "dot3mm.dll",
+		     "dot3msm.dll", "dot3svc.dll", "dot3ui.dll", "dpapi.dll",
+		     "dpapiprovider.dll", "dpapisrv.dll", "dpnaddr.dll",
+		     "dpnathlp.dll", "dpnet.dll", "dpnhpast.dll", "dpnhupnp.dll",
+		     "dpnlobby.dll", "dps.dll", "dpx.dll", "drprov.dll", "drt.dll",
+		     "drtprov.dll", "drttransport.dll", "drvsetup.dll",
+		     "drvstore.dll", "dsauth.dll", "dsccore.dll",
+		     "dsccoreconfprov.dll", "dsclient.dll", "dscproxy.dll",
+		     "dsctimer.dll", "dsdmo.dll", "dskquota.dll", "dskquoui.dll",
+		     "dsound.dll", "dsparse.dll", "dsprop.dll", "dsquery.dll",
+		     "dsreg.dll", "dsregtask.dll", "dsrole.dll", "dssec.dll",
+		     "dssenh.dll", "dssvc.dll", "dsui.dll", "dsuiext.dll",
+		     "dswave.dll", "dtsh.dll", "ducsps.dll", "dui70.dll",
+		     "duser.dll", "dusmapi.dll", "dusmsvc.dll", "dwmapi.dll",
+		     "dwmcore.dll", "dwmghost.dll", "dwminit.dll", "dwmredir.dll",
+		     "dwmscene.dll", "dwrite.dll", "dxcore.dll", "dxdiagn.dll",
+		     "dxgi.dll", "dxgwdi.dll", "dxilconv.dll", "dxmasf.dll",
+		     "dxp.dll", "dxpps.dll", "dxptasksync.dll", "dxtmsft.dll",
+		     "dxtrans.dll", "dxva2.dll", "dynamoapi.dll", "eapp3hst.dll",
+		     "eappcfg.dll", "eappcfgui.dll", "eappgnui.dll", "eapphost.dll",
+		     "eappprxy.dll", "eapprovp.dll", "eapputil.dll",
+		     "eapsimextdesktop.dll", "eapsvc.dll", "eapteapauth.dll",
+		     "eapteapconfig.dll", "eapteapext.dll", "easconsent.dll",
+		     "easwrt.dll", "edgeangle.dll", "edgecontent.dll",
+		     "edgehtml.dll", "edgeiso.dll", "edgemanager.dll",
+		     "edpauditapi.dll", "edpcsp.dll", "edptask.dll", "edputil.dll",
+		     "eeprov.dll", "eeutil.dll", "efsadu.dll", "efscore.dll",
+		     "efsext.dll", "efslsaext.dll", "efssvc.dll", "efsutil.dll",
+		     "efswrt.dll", "ehstorapi.dll", "ehstorpwdmgr.dll",
+		     "ehstorshell.dll", "els.dll", "elscore.dll", "elshyph.dll",
+		     "elslad.dll", "elstrans.dll", "emailapis.dll",
+		     "embeddedmodesvc.dll", "emojids.dll", "encapi.dll",
+		     "energy.dll", "energyprov.dll", "energytask.dll",
+		     "enrollmentapi.dll", "enterpriseapncsp.dll",
+		     "enterprisecsps.dll", "enterpriseetw.dll", "eqossnap.dll",
+		     "errordetails.dll", "errordetailscore.dll", "es.dll",
+		     "esclprotocol.dll", "esclscan.dll", "esclwiadriver.dll",
+		     "esdsip.dll", "esent.dll", "esentprf.dll", "esevss.dll",
+		     "eshims.dll", "etwrundown.dll", "euiccscsp.dll",
+		     "eventaggregation.dll", "eventcls.dll", "evr.dll",
+		     "execmodelclient.dll", "execmodelproxy.dll",
+		     "explorerframe.dll", "exsmime.dll", "extrasxmlparser.dll",
+		     "f3ahvoas.dll", "facilitator.dll", "familysafetyext.dll",
+		     "faultrep.dll", "fcon.dll", "fdbth.dll", "fdbthproxy.dll",
+		     "fddevquery.dll", "fde.dll", "fdeploy.dll", "fdphost.dll",
+		     "fdpnp.dll", "fdprint.dll", "fdproxy.dll", "fdrespub.dll",
+		     "fdssdp.dll", "fdwcn.dll", "fdwnet.dll", "fdwsd.dll",
+		     "feclient.dll", "ffbroker.dll", "fhcat.dll", "fhcfg.dll",
+		     "fhcleanup.dll", "fhcpl.dll", "fhengine.dll", "fhevents.dll",
+		     "fhshl.dll", "fhsrchapi.dll", "fhsrchph.dll", "fhsvc.dll",
+		     "fhsvcctl.dll", "fhtask.dll", "fhuxadapter.dll", "fhuxapi.dll",
+		     "fhuxcommon.dll", "fhuxgraphics.dll", "fhuxpresentation.dll",
+		     "fidocredprov.dll", "filemgmt.dll", "filterds.dll",
+		     "findnetprinters.dll", "firewallapi.dll", "flightsettings.dll",
+		     "fltlib.dll", "fluencyds.dll", "fmapi.dll", "fmifs.dll",
+		     "fms.dll", "fntcache.dll", "fontext.dll", "fontprovider.dll",
+		     "fontsub.dll", "fphc.dll", "framedyn.dll", "framedynos.dll",
+		     "frameserver.dll", "frprov.dll", "fsutilext.dll", "fthsvc.dll",
+		     "fundisc.dll", "fveapi.dll", "fveapibase.dll", "fvecerts.dll",
+		     "fvecpl.dll", "fveskybackup.dll", "fveui.dll", "fvewiz.dll",
+		     "fwbase.dll", "fwcfg.dll", "fwmdmcsp.dll", "fwpolicyiomgr.dll",
+		     "fwpuclnt.dll", "fwremotesvr.dll", "gameinput.dll",
+		     "gamemode.dll", "gamestreamingext.dll", "gameux.dll",
+		     "gamingtcui.dll", "gcdef.dll", "gdi32.dll", "gdi32full.dll",
+		     "gdiplus.dll", "generaltel.dll", "geocommon.dll",
+		     "geolocation.dll", "getuname.dll", "glmf32.dll",
+		     "globinputhost.dll", "glu32.dll", "gmsaclient.dll",
+		     "gpapi.dll", "gpcsewrappercsp.dll", "gpedit.dll",
+		     "gpprefcl.dll", "gpprnext.dll", "gpscript.dll", "gpsvc.dll",
+		     "gptext.dll", "graphicscapture.dll", "graphicsperfsvc.dll",
+		     "groupinghc.dll", "hal.dll", "halextpl080.dll", "hascsp.dll",
+		     "hashtagds.dll", "hbaapi.dll", "hcproviders.dll",
+		     "hdcphandler.dll", "heatcore.dll", "helppaneproxy.dll",
+		     "hgcpl.dll", "hhsetup.dll", "hid.dll", "hidcfu.dll",
+		     "hidserv.dll", "hlink.dll", "hmkd.dll", "hnetcfg.dll",
+		     "hnetcfgclient.dll", "hnetmon.dll", "hologramworld.dll",
+		     "holoshellruntime.dll", "holoshextensions.dll", "hotplug.dll",
+		     "hrtfapo.dll", "httpapi.dll", "httpprxc.dll", "httpprxm.dll",
+		     "httpprxp.dll", "httpsdatasource.dll", "htui.dll",
+		     "hvhostsvc.dll", "hvloader.dll", "hvsigpext.dll",
+		     "hvsocket.dll", "hydrogen.dll", "ia2comproxy.dll", "ias.dll",
+		     "iasacct.dll", "iasads.dll", "iasdatastore.dll", "iashlpr.dll",
+		     "iasmigplugin.dll", "iasnap.dll", "iaspolcy.dll", "iasrad.dll",
+		     "iasrecst.dll", "iassam.dll", "iassdo.dll", "iassvcs.dll",
+		     "icfupgd.dll", "icm32.dll", "icmp.dll", "icmui.dll",
+		     "iconcodecservice.dll", "icsigd.dll", "icsvc.dll",
+		     "icsvcext.dll", "icu.dll", "icuin.dll", "icuuc.dll",
+		     "idctrls.dll", "idlisten.dll", "idndl.dll", "idstore.dll",
+		     "ieadvpack.dll", "ieapfltr.dll", "iedkcs32.dll", "ieframe.dll",
+		     "iemigplugin.dll", "iepeers.dll", "ieproxy.dll",
+		     "iernonce.dll", "iertutil.dll", "iesetup.dll", "iesysprep.dll",
+		     "ieui.dll", "ifmon.dll", "ifsutil.dll", "ifsutilx.dll",
+		     "igddiag.dll", "ihds.dll", "ikeext.dll", "imagehlp.dll",
+		     "imageres.dll", "imagesp1.dll", "imapi.dll", "imapi2.dll",
+		     "imapi2fs.dll", "imgutil.dll", "imm32.dll", "implatsetup.dll",
+		     "indexeddblegacy.dll", "inetcomm.dll", "inetmib1.dll",
+		     "inetpp.dll", "inetppui.dll", "inetres.dll", "inked.dll",
+		     "inkobjcore.dll", "inproclogger.dll", "input.dll",
+		     "inputcloudstore.dll", "inputcontroller.dll", "inputhost.dll",
+		     "inputservice.dll", "inputswitch.dll", "inseng.dll",
+		     "installservice.dll", "internetmail.dll",
+		     "internetmailcsp.dll", "invagent.dll", "iologmsg.dll",
+		     "iphlpapi.dll", "iphlpsvc.dll", "ipnathlp.dll",
+		     "ipnathlpclient.dll", "ippcommon.dll", "ippcommonproxy.dll",
+		     "iprtprio.dll", "iprtrmgr.dll", "ipsecsnp.dll", "ipsecsvc.dll",
+		     "ipsmsnap.dll", "ipxlatcfg.dll", "iri.dll", "iscsicpl.dll",
+		     "iscsidsc.dll", "iscsied.dll", "iscsiexe.dll", "iscsilog.dll",
+		     "iscsium.dll", "iscsiwmi.dll", "iscsiwmiv2.dll", "ism.dll",
+		     "itircl.dll", "itss.dll", "iuilp.dll", "iumbase.dll",
+		     "iumcrypt.dll", "iumdll.dll", "iumsdk.dll", "iyuv_32.dll",
+		     "joinproviderol.dll", "joinutil.dll", "jpmapcontrol.dll",
+		     "jpndecoder.dll", "jpninputrouter.dll", "jpnranker.dll",
+		     "jpnserviceds.dll", "jscript.dll", "jscript9.dll",
+		     "jscript9diag.dll", "jsproxy.dll", "kbd101.dll", "kbd101a.dll",
+		     "kbd101b.dll", "kbd101c.dll", "kbd103.dll", "kbd106.dll",
+		     "kbd106n.dll", "kbda1.dll", "kbda2.dll", "kbda3.dll",
+		     "kbdadlm.dll", "kbdal.dll", "kbdarme.dll", "kbdarmph.dll",
+		     "kbdarmty.dll", "kbdarmw.dll", "kbdax2.dll", "kbdaze.dll",
+		     "kbdazel.dll", "kbdazst.dll", "kbdbash.dll", "kbdbe.dll",
+		     "kbdbene.dll", "kbdbgph.dll", "kbdbgph1.dll", "kbdbhc.dll",
+		     "kbdblr.dll", "kbdbr.dll", "kbdbu.dll", "kbdbug.dll",
+		     "kbdbulg.dll", "kbdca.dll", "kbdcan.dll", "kbdcher.dll",
+		     "kbdcherp.dll", "kbdcr.dll", "kbdcz.dll", "kbdcz1.dll",
+		     "kbdcz2.dll", "kbdda.dll", "kbddiv1.dll", "kbddiv2.dll",
+		     "kbddv.dll", "kbddzo.dll", "kbdes.dll", "kbdest.dll",
+		     "kbdfa.dll", "kbdfar.dll", "kbdfc.dll", "kbdfi.dll",
+		     "kbdfi1.dll", "kbdfo.dll", "kbdfr.dll", "kbdfthrk.dll",
+		     "kbdgae.dll", "kbdgeo.dll", "kbdgeoer.dll", "kbdgeome.dll",
+		     "kbdgeooa.dll", "kbdgeoqw.dll", "kbdgkl.dll", "kbdgn.dll",
+		     "kbdgr.dll", "kbdgr1.dll", "kbdgrlnd.dll", "kbdgthc.dll",
+		     "kbdhau.dll", "kbdhaw.dll", "kbdhe.dll", "kbdhe220.dll",
+		     "kbdhe319.dll", "kbdheb.dll", "kbdhebl3.dll", "kbdhela2.dll",
+		     "kbdhela3.dll", "kbdhept.dll", "kbdhu.dll", "kbdhu1.dll",
+		     "kbdibm02.dll", "kbdibo.dll", "kbdic.dll", "kbdinasa.dll",
+		     "kbdinbe1.dll", "kbdinbe2.dll", "kbdinben.dll", "kbdindev.dll",
+		     "kbdinen.dll", "kbdinguj.dll", "kbdinhin.dll", "kbdinkan.dll",
+		     "kbdinmal.dll", "kbdinmar.dll", "kbdinori.dll", "kbdinpun.dll",
+		     "kbdintam.dll", "kbdintel.dll", "kbdinuk2.dll", "kbdir.dll",
+		     "kbdit.dll", "kbdit142.dll", "kbdiulat.dll", "kbdjav.dll",
+		     "kbdjpn.dll", "kbdkaz.dll", "kbdkhmr.dll", "kbdkni.dll",
+		     "kbdkor.dll", "kbdkurd.dll", "kbdkyr.dll", "kbdla.dll",
+		     "kbdlao.dll", "kbdlisub.dll", "kbdlisus.dll", "kbdlk41a.dll",
+		     "kbdlt.dll", "kbdlt1.dll", "kbdlt2.dll", "kbdlv.dll",
+		     "kbdlv1.dll", "kbdlvst.dll", "kbdmac.dll", "kbdmacst.dll",
+		     "kbdmaori.dll", "kbdmlt47.dll", "kbdmlt48.dll", "kbdmon.dll",
+		     "kbdmonmo.dll", "kbdmonst.dll", "kbdmyan.dll", "kbdne.dll",
+		     "kbdnec.dll", "kbdnec95.dll", "kbdnecat.dll", "kbdnecnt.dll",
+		     "kbdnepr.dll", "kbdnko.dll", "kbdno.dll", "kbdno1.dll",
+		     "kbdnso.dll", "kbdntl.dll", "kbdogham.dll", "kbdolch.dll",
+		     "kbdoldit.dll", "kbdosa.dll", "kbdosm.dll", "kbdpash.dll",
+		     "kbdphags.dll", "kbdpl.dll", "kbdpl1.dll", "kbdpo.dll",
+		     "kbdro.dll", "kbdropr.dll", "kbdrost.dll", "kbdru.dll",
+		     "kbdru1.dll", "kbdrum.dll", "kbdsf.dll", "kbdsg.dll",
+		     "kbdsl.dll", "kbdsl1.dll", "kbdsmsfi.dll", "kbdsmsno.dll",
+		     "kbdsn1.dll", "kbdsora.dll", "kbdsorex.dll", "kbdsors1.dll",
+		     "kbdsorst.dll", "kbdsp.dll", "kbdsw.dll", "kbdsw09.dll",
+		     "kbdsyr1.dll", "kbdsyr2.dll", "kbdtaile.dll", "kbdtajik.dll",
+		     "kbdtam99.dll", "kbdtat.dll", "kbdth0.dll", "kbdth1.dll",
+		     "kbdth2.dll", "kbdth3.dll", "kbdtifi.dll", "kbdtifi2.dll",
+		     "kbdtiprc.dll", "kbdtiprd.dll", "kbdtt102.dll", "kbdtuf.dll",
+		     "kbdtuq.dll", "kbdturme.dll", "kbdtzm.dll", "kbdughr.dll",
+		     "kbdughr1.dll", "kbduk.dll", "kbdukx.dll", "kbdur.dll",
+		     "kbdur1.dll", "kbdurdu.dll", "kbdus.dll", "kbdusa.dll",
+		     "kbdusl.dll", "kbdusr.dll", "kbdusx.dll", "kbduzb.dll",
+		     "kbdvntc.dll", "kbdwol.dll", "kbdyak.dll", "kbdyba.dll",
+		     "kbdycc.dll", "kbdycl.dll", "kd.dll", "kdcom.dll", "kdcpw.dll",
+		     "kdhvcom.dll", "kdnet.dll", "kdnet_uart16550.dll",
+		     "kdscli.dll", "kdstub.dll", "kdusb.dll", "kd_02_10df.dll",
+		     "kd_02_10ec.dll", "kd_02_1137.dll", "kd_02_14e4.dll",
+		     "kd_02_15b3.dll", "kd_02_1969.dll", "kd_02_19a2.dll",
+		     "kd_02_1af4.dll", "kd_02_8086.dll", "kd_07_1415.dll",
+		     "kd_0c_8086.dll", "kerbclientshared.dll", "kerberos.dll",
+		     "kernel32.dll", "kernelbase.dll", "keycredmgr.dll",
+		     "keyiso.dll", "keymgr.dll", "knobscore.dll", "knobscsp.dll",
+		     "ksuser.dll", "ktmw32.dll", "l2gpstore.dll", "l2nacp.dll",
+		     "l2sechc.dll", "laprxy.dll", "legacynetux.dll", "lfsvc.dll",
+		     "libcrypto.dll", "licensemanager.dll", "licensingcsp.dll",
+		     "licensingdiagspp.dll", "licensingwinrt.dll", "licmgr10.dll",
+		     "linkinfo.dll", "lltdapi.dll", "lltdres.dll", "lltdsvc.dll",
+		     "lmhsvc.dll", "loadperf.dll", "localsec.dll", "localspl.dll",
+		     "localui.dll", "locationapi.dll", "lockappbroker.dll",
+		     "lockcontroller.dll", "lockscreendata.dll", "loghours.dll",
+		     "logoncli.dll", "logoncontroller.dll", "lpasvc.dll", "lpk.dll",
+		     "lsasrv.dll", "lscshostpolicy.dll", "lsm.dll", "lsmproxy.dll",
+		     "lstelemetry.dll", "luainstall.dll", "luiapi.dll", "lz32.dll",
+		     "magnification.dll", "maintenanceui.dll", "manageci.dll",
+		     "mapconfiguration.dll", "mapcontrolcore.dll",
+		     "mapgeocoder.dll", "mapi32.dll", "mapistub.dll",
+		     "maprouter.dll", "mapsbtsvc.dll", "mapsbtsvcproxy.dll",
+		     "mapscsp.dll", "mapsstore.dll", "mapstoasttask.dll",
+		     "mapsupdatetask.dll", "mbaeapi.dll", "mbaeapipublic.dll",
+		     "mbaexmlparser.dll", "mbmediamanager.dll", "mbsmsapi.dll",
+		     "mbussdapi.dll", "mccsengineshared.dll", "mccspal.dll",
+		     "mciavi32.dll", "mcicda.dll", "mciqtz32.dll", "mciseq.dll",
+		     "mciwave.dll", "mcrecvsrc.dll", "mdmcommon.dll",
+		     "mdmdiagnostics.dll", "mdminst.dll", "mdmmigrator.dll",
+		     "mdmregistration.dll", "memorydiagnostic.dll",
+		     "messagingservice.dll", "mf.dll", "mf3216.dll", "mfaacenc.dll",
+		     "mfasfsrcsnk.dll", "mfaudiocnv.dll", "mfc42.dll", "mfc42u.dll",
+		     "mfcaptureengine.dll", "mfcore.dll", "mfcsubs.dll", "mfds.dll",
+		     "mfdvdec.dll", "mferror.dll", "mfh263enc.dll", "mfh264enc.dll",
+		     "mfksproxy.dll", "mfmediaengine.dll", "mfmjpegdec.dll",
+		     "mfmkvsrcsnk.dll", "mfmp4srcsnk.dll", "mfmpeg2srcsnk.dll",
+		     "mfnetcore.dll", "mfnetsrc.dll", "mfperfhelper.dll",
+		     "mfplat.dll", "mfplay.dll", "mfps.dll", "mfreadwrite.dll",
+		     "mfsensorgroup.dll", "mfsrcsnk.dll", "mfsvr.dll",
+		     "mftranscode.dll", "mfvdsp.dll", "mfvfw.dll", "mfwmaaec.dll",
+		     "mgmtapi.dll", "mi.dll", "mibincodec.dll", "midimap.dll",
+		     "migisol.dll", "miguiresource.dll", "mimefilt.dll",
+		     "mimofcodec.dll", "minstoreevents.dll", "miracastinputmgr.dll",
+		     "miracastreceiver.dll", "mirrordrvcompat.dll", "mispace.dll",
+		     "mitigationclient.dll", "miutils.dll", "mlang.dll",
+		     "mmcbase.dll", "mmcndmgr.dll", "mmcshext.dll", "mmdevapi.dll",
+		     "mmgaclient.dll", "mmgaproxystub.dll", "mmres.dll",
+		     "mobilenetworking.dll", "modemui.dll", "modernexecserver.dll",
+		     "moricons.dll", "moshost.dll", "moshostclient.dll",
+		     "moshostcore.dll", "mosstorage.dll", "mp3dmod.dll",
+		     "mp43decd.dll", "mp4sdecd.dll", "mpeval.dll", "mpg4decd.dll",
+		     "mpr.dll", "mprapi.dll", "mprddm.dll", "mprdim.dll",
+		     "mprext.dll", "mprmsg.dll", "mpssvc.dll", "mpunits.dll",
+		     "mrmcorer.dll", "mrmdeploy.dll", "mrmindexer.dll",
+		     "mrt100.dll", "mrt_map.dll", "msaatext.dll", "msac3enc.dll",
+		     "msacm32.dll", "msafd.dll", "msajapi.dll", "msalacdecoder.dll",
+		     "msalacencoder.dll", "msamrnbdecoder.dll",
+		     "msamrnbencoder.dll", "msamrnbsink.dll", "msamrnbsource.dll",
+		     "msasn1.dll", "msauddecmft.dll", "msaudite.dll",
+		     "msauserext.dll", "mscandui.dll", "mscat32.dll", "msclmd.dll",
+		     "mscms.dll", "mscoree.dll", "mscorier.dll", "mscories.dll",
+		     "msctf.dll", "msctfmonitor.dll", "msctfp.dll", "msctfui.dll",
+		     "msctfuimanager.dll", "msdadiag.dll", "msdart.dll",
+		     "msdelta.dll", "msdmo.dll", "msdrm.dll", "msdtckrm.dll",
+		     "msdtclog.dll", "msdtcprx.dll", "msdtcspoffln.dll",
+		     "msdtctm.dll", "msdtcuiu.dll", "msdtcvsp1res.dll",
+		     "msfeeds.dll", "msfeedsbs.dll", "msflacdecoder.dll",
+		     "msflacencoder.dll", "msftedit.dll", "msheif.dll",
+		     "mshtml.dll", "mshtmldac.dll", "mshtmled.dll", "mshtmler.dll",
+		     "msi.dll", "msicofire.dll", "msidcrl40.dll", "msident.dll",
+		     "msidle.dll", "msidntld.dll", "msieftp.dll", "msihnd.dll",
+		     "msiltcfg.dll", "msimg32.dll", "msimsg.dll", "msimtf.dll",
+		     "msisip.dll", "msiso.dll", "msiwer.dll", "mskeyprotcli.dll",
+		     "mskeyprotect.dll", "msls31.dll", "msmpeg2adec.dll",
+		     "msmpeg2enc.dll", "msmpeg2vdec.dll", "msobjs.dll",
+		     "msoert2.dll", "msopusdecoder.dll", "mspatcha.dll",
+		     "mspatchc.dll", "msphotography.dll", "msports.dll",
+		     "msprivs.dll", "msrahc.dll", "msrating.dll", "msrawimage.dll",
+		     "msrdc.dll", "msrdpwebaccess.dll", "msrle32.dll",
+		     "msscntrs.dll", "mssecuser.dll", "mssign32.dll", "mssip32.dll",
+		     "mssitlb.dll", "mssph.dll", "mssprxy.dll", "mssrch.dll",
+		     "mssvp.dll", "mstask.dll", "mstextprediction.dll",
+		     "mstscax.dll", "msutb.dll", "msv1_0.dll", "msvcirt.dll",
+		     "msvcp110_win.dll", "msvcp120_clr0400.dll",
+		     "msvcp140_clr0400.dll", "msvcp60.dll", "msvcp_win.dll",
+		     "msvcr100_clr0400.dll", "msvcr120_clr0400.dll", "msvcrt.dll",
+		     "msvfw32.dll", "msvidc32.dll", "msvidctl.dll",
+		     "msvideodsp.dll", "msvp9dec.dll", "msvproc.dll",
+		     "msvpxenc.dll", "mswb7.dll", "mswebp.dll", "mswmdm.dll",
+		     "mswsock.dll", "msxml3.dll", "msxml3r.dll", "msxml6.dll",
+		     "msxml6r.dll", "msyuv.dll", "mtcmodel.dll", "mtf.dll",
+		     "mtfappserviceds.dll", "mtfdecoder.dll", "mtffuzzyds.dll",
+		     "mtfserver.dll", "mtfspellcheckds.dll", "mtxclu.dll",
+		     "mtxdm.dll", "mtxex.dll", "mtxoci.dll", "muifontsetup.dll",
+		     "mycomput.dll", "mydocs.dll", "napcrypt.dll", "napinsp.dll",
+		     "naturalauth.dll", "naturallanguage6.dll", "navshutdown.dll",
+		     "ncaapi.dll", "ncasvc.dll", "ncbservice.dll",
+		     "ncdautosetup.dll", "ncdprop.dll", "nci.dll", "ncobjapi.dll",
+		     "ncrypt.dll", "ncryptprov.dll", "ncryptsslp.dll", "ncsi.dll",
+		     "ncuprov.dll", "nddeapi.dll", "ndfapi.dll", "ndfetw.dll",
+		     "ndfhcdiscovery.dll", "ndishc.dll", "ndproxystub.dll",
+		     "nduprov.dll", "negoexts.dll", "netapi32.dll", "netbios.dll",
+		     "netcenter.dll", "netcfgx.dll", "netcorehc.dll",
+		     "netdiagfx.dll", "netdriverinstall.dll", "netevent.dll",
+		     "netfxperf.dll", "neth.dll", "netid.dll", "netiohlp.dll",
+		     "netjoin.dll", "netlogon.dll", "netman.dll", "netmsg.dll",
+		     "netplwiz.dll", "netprofm.dll", "netprofmsvc.dll",
+		     "netprovfw.dll", "netprovisionsp.dll", "netsetupapi.dll",
+		     "netsetupengine.dll", "netsetupshim.dll", "netsetupsvc.dll",
+		     "netshell.dll", "nettrace.dll", "netutils.dll",
+		     "networkexplorer.dll", "networkhelper.dll", "networkicon.dll",
+		     "networkproxycsp.dll", "networkstatus.dll",
+		     "networkuxbroker.dll", "newdev.dll", "nfcradiomedia.dll",
+		     "ngccredprov.dll", "ngcctnr.dll", "ngcctnrsvc.dll",
+		     "ngcisoctnr.dll", "ngckeyenum.dll", "ngcksp.dll",
+		     "ngclocal.dll", "ngcpopkeysrv.dll", "ngcprocsp.dll",
+		     "ngcrecovery.dll", "ngcsvc.dll", "ngctasks.dll", "ninput.dll",
+		     "nlaapi.dll", "nlahc.dll", "nlasvc.dll", "nlhtml.dll",
+		     "nlmgp.dll", "nlmproxy.dll", "nlmsprep.dll", "nlsbres.dll",
+		     "nlsdata0000.dll", "nlsdata0009.dll", "nlsdl.dll",
+		     "nlslexicons0009.dll", "nmadirect.dll", "normaliz.dll",
+		     "npmproxy.dll", "npsm.dll", "nrpsrv.dll", "nshhttp.dll",
+		     "nshipsec.dll", "nshwfp.dll", "nsi.dll", "nsisvc.dll",
+		     "ntasn1.dll", "ntdll.dll", "ntdsapi.dll", "ntlanman.dll",
+		     "ntlanui2.dll", "ntlmshared.dll", "ntmarta.dll", "ntprint.dll",
+		     "ntshrui.dll", "ntvdm64.dll", "objsel.dll", "occache.dll",
+		     "ocsetapi.dll", "odbc32.dll", "odbcbcp.dll", "odbcconf.dll",
+		     "odbccp32.dll", "odbccr32.dll", "odbccu32.dll", "odbcint.dll",
+		     "odbctrac.dll", "oemlicense.dll", "offfilt.dll",
+		     "officecsp.dll", "offlinelsa.dll", "offlinesam.dll",
+		     "offreg.dll", "ole32.dll", "oleacc.dll", "oleacchooks.dll",
+		     "oleaccrc.dll", "oleaut32.dll", "oledlg.dll", "oleprn.dll",
+		     "omadmagent.dll", "omadmapi.dll", "onebackuphandler.dll",
+		     "onex.dll", "onexui.dll", "opcservices.dll", "opengl32.dll",
+		     "ortcengine.dll", "osbaseln.dll", "osksupport.dll",
+		     "osuninst.dll", "p2p.dll", "p2pgraph.dll", "p2pnetsh.dll",
+		     "p2psvc.dll", "packager.dll", "panmap.dll", "pautoenr.dll",
+		     "pcacli.dll", "pcadm.dll", "pcaevts.dll", "pcasvc.dll",
+		     "pcaui.dll", "pcpksp.dll", "pcsvdevice.dll", "pcwum.dll",
+		     "pcwutl.dll", "pdh.dll", "pdhui.dll", "peerdist.dll",
+		     "peerdistad.dll", "peerdistcleaner.dll", "peerdistsh.dll",
+		     "peerdistsvc.dll", "peopleapis.dll", "peopleband.dll",
+		     "perceptiondevice.dll", "perfctrs.dll", "perfdisk.dll",
+		     "perfnet.dll", "perfos.dll", "perfproc.dll", "perfts.dll",
+		     "phoneom.dll", "phoneproviders.dll", "phoneservice.dll",
+		     "phoneserviceres.dll", "phoneutil.dll", "phoneutilres.dll",
+		     "photowiz.dll", "pickerplatform.dll", "pid.dll", "pidgenx.dll",
+		     "pifmgr.dll", "pimstore.dll", "pkeyhelper.dll",
+		     "pktmonapi.dll", "pku2u.dll", "pla.dll", "playlistfolder.dll",
+		     "playsndsrv.dll", "playtodevice.dll", "playtomanager.dll",
+		     "playtomenu.dll", "playtoreceiver.dll", "ploptin.dll",
+		     "pmcsnap.dll", "pngfilt.dll", "pnidui.dll", "pnpclean.dll",
+		     "pnppolicy.dll", "pnpts.dll", "pnpui.dll", "pnpxassoc.dll",
+		     "pnpxassocprx.dll", "pnrpauto.dll", "pnrphc.dll",
+		     "pnrpnsp.dll", "pnrpsvc.dll", "policymanager.dll",
+		     "polstore.dll", "posetup.dll", "posyncservices.dll",
+		     "pots.dll", "powercpl.dll", "powrprof.dll", "ppcsnap.dll",
+		     "prauthproviders.dll", "prflbmsg.dll", "printui.dll",
+		     "printwsdahost.dll", "prm0009.dll", "prncache.dll",
+		     "prnfldr.dll", "prnntfy.dll", "prntvpt.dll", "profapi.dll",
+		     "profext.dll", "profprov.dll", "profsvc.dll", "profsvcext.dll",
+		     "propsys.dll", "provcore.dll", "provdatastore.dll",
+		     "provdiagnostics.dll", "provengine.dll", "provhandlers.dll",
+		     "provisioningcsp.dll", "provmigrate.dll", "provops.dll",
+		     "provplugineng.dll", "provsysprep.dll", "provthrd.dll",
+		     "proximitycommon.dll", "proximityservice.dll",
+		     "prvdmofcomp.dll", "psapi.dll", "pshed.dll", "psisdecd.dll",
+		     "psmsrv.dll", "pstask.dll", "pstorec.dll", "ptpprov.dll",
+		     "puiapi.dll", "puiobj.dll", "pushtoinstall.dll",
+		     "pwlauncher.dll", "pwrshplugin.dll", "pwsso.dll", "qasf.dll",
+		     "qcap.dll", "qdv.dll", "qdvd.dll", "qedit.dll", "qedwipes.dll",
+		     "qmgr.dll", "query.dll", "quiethours.dll", "qwave.dll",
+		     "racengn.dll", "racpldlg.dll", "radardt.dll", "radarrs.dll",
+		     "radcui.dll", "rasadhlp.dll", "rasapi32.dll", "rasauto.dll",
+		     "raschap.dll", "raschapext.dll", "rasctrs.dll",
+		     "rascustom.dll", "rasdiag.dll", "rasdlg.dll", "rasgcw.dll",
+		     "rasman.dll", "rasmans.dll", "rasmbmgr.dll",
+		     "rasmediamanager.dll", "rasmm.dll", "rasmontr.dll",
+		     "rasplap.dll", "rasppp.dll", "rastapi.dll", "rastls.dll",
+		     "rastlsext.dll", "rdbui.dll", "rdpbase.dll", "rdpcfgex.dll",
+		     "rdpcore.dll", "rdpcorets.dll", "rdpencom.dll", "rdpendp.dll",
+		     "rdpnano.dll", "rdpsaps.dll", "rdpserverbase.dll",
+		     "rdpsharercom.dll", "rdpudd.dll", "rdpviewerax.dll",
+		     "rdsappxhelper.dll", "rdsdwmdr.dll", "rdvvmtransport.dll",
+		     "rdxservice.dll", "rdxtaskfactory.dll", "reagent.dll",
+		     "reagenttask.dll", "recovery.dll", "regapi.dll", "regctrl.dll",
+		     "regidle.dll", "regsvc.dll", "reguwpapi.dll", "reinfo.dll",
+		     "remotepg.dll", "remotewipecsp.dll", "reportingcsp.dll",
+		     "resampledmo.dll", "resbparser.dll", "reseteng.dll",
+		     "resetengine.dll", "resetengonline.dll", "resourcemapper.dll",
+		     "resutils.dll", "rgb9rast.dll", "riched20.dll", "riched32.dll",
+		     "rjvmdmconfig.dll", "rmapi.dll", "rmclient.dll", "rnr20.dll",
+		     "roamingsecurity.dll", "rometadata.dll", "rotmgr.dll",
+		     "rpcepmap.dll", "rpchttp.dll", "rpcns4.dll", "rpcnsh.dll",
+		     "rpcrt4.dll", "rpcrtremote.dll", "rpcss.dll", "rsaenh.dll",
+		     "rshx32.dll", "rstrtmgr.dll", "rtffilt.dll", "rtm.dll",
+		     "rtmediaframe.dll", "rtmmvrortc.dll", "rtutils.dll",
+		     "rtworkq.dll", "rulebasedds.dll", "samcli.dll", "samlib.dll",
+		     "samsrv.dll", "sas.dll", "sbe.dll", "sbeio.dll", "sberes.dll",
+		     "sbservicetrigger.dll", "scansetting.dll", "scardbi.dll",
+		     "scarddlg.dll", "scardsvr.dll", "scavengeui.dll",
+		     "scdeviceenum.dll", "scecli.dll", "scesrv.dll", "schannel.dll",
+		     "schedcli.dll", "schedsvc.dll", "scksp.dll", "scripto.dll",
+		     "scrobj.dll", "scrptadm.dll", "scrrun.dll", "sdcpl.dll",
+		     "sdds.dll", "sdengin2.dll", "sdfhost.dll", "sdhcinst.dll",
+		     "sdiageng.dll", "sdiagprv.dll", "sdiagschd.dll", "sdohlp.dll",
+		     "sdrsvc.dll", "sdshext.dll", "searchfolder.dll", "sechost.dll",
+		     "seclogon.dll", "secproc.dll", "secproc_isv.dll",
+		     "secproc_ssp.dll", "secproc_ssp_isv.dll", "secur32.dll",
+		     "security.dll", "semgrps.dll", "semgrsvc.dll", "sendmail.dll",
+		     "sens.dll", "sensapi.dll", "sensorsapi.dll", "sensorscpl.dll",
+		     "sensorservice.dll", "sensorsnativeapi.dll",
+		     "sensorsutilsv2.dll", "sensrsvc.dll", "serialui.dll",
+		     "servicinguapi.dll", "serwvdrv.dll", "sessenv.dll",
+		     "setbcdlocale.dll", "settingmonitor.dll", "settingsync.dll",
+		     "settingsynccore.dll", "setupapi.dll", "setupcl.dll",
+		     "setupcln.dll", "setupetw.dll", "sfc.dll", "sfc_os.dll",
+		     "sgrmenclave.dll", "shacct.dll", "shacctprofile.dll",
+		     "sharedpccsp.dll", "sharedrealitysvc.dll", "sharehost.dll",
+		     "sharemediacpl.dll", "shcore.dll", "shdocvw.dll",
+		     "shell32.dll", "shellstyle.dll", "shfolder.dll", "shgina.dll",
+		     "shimeng.dll", "shimgvw.dll", "shlwapi.dll", "shpafact.dll",
+		     "shsetup.dll", "shsvcs.dll", "shunimpl.dll", "shutdownext.dll",
+		     "shutdownux.dll", "shwebsvc.dll", "signdrv.dll", "simauth.dll",
+		     "simcfg.dll", "skci.dll", "slc.dll", "slcext.dll", "slwga.dll",
+		     "smartscreenps.dll", "smbhelperclass.dll", "smbwmiv2.dll",
+		     "smiengine.dll", "smphost.dll", "smsroutersvc.dll",
+		     "sndvolsso.dll", "snmpapi.dll", "socialapis.dll",
+		     "softkbd.dll", "softpub.dll", "sortwindows61.dll",
+		     "sortwindows62.dll", "spacebridge.dll", "spacecontrol.dll",
+		     "spatializerapo.dll", "spatialstore.dll", "spbcd.dll",
+		     "speechpal.dll", "spfileq.dll", "spinf.dll", "spmpm.dll",
+		     "spnet.dll", "spoolss.dll", "spopk.dll", "spp.dll", "sppc.dll",
+		     "sppcext.dll", "sppcomapi.dll", "sppcommdlg.dll",
+		     "sppinst.dll", "sppnp.dll", "sppobjs.dll", "sppwinob.dll",
+		     "sppwmi.dll", "spwinsat.dll", "spwizeng.dll", "spwizimg.dll",
+		     "spwizres.dll", "spwmp.dll", "sqlsrv32.dll", "sqmapi.dll",
+		     "srchadmin.dll", "srclient.dll", "srcore.dll", "srevents.dll",
+		     "srh.dll", "srhelper.dll", "srm.dll", "srmclient.dll",
+		     "srmlib.dll", "srmscan.dll", "srmshell.dll", "srmstormod.dll",
+		     "srmtrace.dll", "srm_ps.dll", "srpapi.dll", "srrstr.dll",
+		     "srumapi.dll", "srumsvc.dll", "srvcli.dll", "srvsvc.dll",
+		     "srwmi.dll", "sscore.dll", "sscoreext.dll", "ssdm.dll",
+		     "ssdpapi.dll", "ssdpsrv.dll", "sspicli.dll", "sspisrv.dll",
+		     "ssshim.dll", "sstpsvc.dll", "starttiledata.dll",
+		     "startupscan.dll", "stclient.dll", "sti.dll", "sti_ci.dll",
+		     "stobject.dll", "storageusage.dll", "storagewmi.dll",
+		     "storewuauth.dll", "storprop.dll", "storsvc.dll",
+		     "streamci.dll", "structuredquery.dll", "sud.dll", "svf.dll",
+		     "svsvc.dll", "swprv.dll", "sxproxy.dll", "sxs.dll",
+		     "sxshared.dll", "sxssrv.dll", "sxsstore.dll", "synccenter.dll",
+		     "synccontroller.dll", "synchostps.dll", "syncproxy.dll",
+		     "syncreg.dll", "syncres.dll", "syncsettings.dll",
+		     "syncutil.dll", "sysclass.dll", "sysfxui.dll", "sysmain.dll",
+		     "sysntfy.dll", "syssetup.dll", "systemcpl.dll", "t2embed.dll",
+		     "tabbtn.dll", "tabbtnex.dll", "tabsvc.dll", "tapi3.dll",
+		     "tapi32.dll", "tapilua.dll", "tapimigplugin.dll",
+		     "tapiperf.dll", "tapisrv.dll", "tapisysprep.dll", "tapiui.dll",
+		     "taskapis.dll", "taskbarcpl.dll", "taskcomp.dll",
+		     "taskschd.dll", "taskschdps.dll", "tbauth.dll", "tbs.dll",
+		     "tcbloader.dll", "tcpipcfg.dll", "tcpmib.dll", "tcpmon.dll",
+		     "tcpmonui.dll", "tdh.dll", "tdlmigration.dll", "tellib.dll",
+		     "termmgr.dll", "termsrv.dll", "tetheringclient.dll",
+		     "tetheringmgr.dll", "tetheringservice.dll",
+		     "tetheringstation.dll", "textshaping.dll", "themecpl.dll",
+		     "themeservice.dll", "themeui.dll", "threadpoolwinrt.dll",
+		     "thumbcache.dll", "timebrokerclient.dll",
+		     "timebrokerserver.dll", "timesync.dll", "timesynctask.dll",
+		     "tlscsp.dll", "tokenbinding.dll", "tokenbroker.dll",
+		     "tokenbrokerui.dll", "tpmcertresources.dll", "tpmcompc.dll",
+		     "tpmtasks.dll", "tpmvsc.dll", "tquery.dll", "traffic.dll",
+		     "transportdsa.dll", "trie.dll", "trkwks.dll", "tsbyuv.dll",
+		     "tscfgwmi.dll", "tserrredir.dll", "tsf3gip.dll", "tsgqec.dll",
+		     "tsmf.dll", "tspkg.dll", "tspubwmi.dll", "tssessionux.dll",
+		     "tssrvlic.dll", "tsworkspace.dll", "ttdloader.dll",
+		     "ttdplm.dll", "ttdrecord.dll", "ttdrecordcpu.dll",
+		     "ttlsauth.dll", "ttlscfg.dll", "ttlsext.dll", "tvratings.dll",
+		     "twext.dll", "twinapi.dll", "twinui.dll", "txflog.dll",
+		     "txfw32.dll", "tzautoupdate.dll", "tzres.dll", "tzsyncres.dll",
+		     "ubpm.dll", "ucmhc.dll", "ucrtbase.dll",
+		     "ucrtbase_clr0400.dll", "ucrtbase_enclave.dll", "udhisapi.dll",
+		     "udwm.dll", "ueficsp.dll", "uexfat.dll", "ufat.dll",
+		     "uiamanager.dll", "uianimation.dll", "uiautomationcore.dll",
+		     "uicom.dll", "uireng.dll", "uiribbon.dll", "uiribbonres.dll",
+		     "ulib.dll", "umb.dll", "umdmxfrm.dll", "umpdc.dll",
+		     "umpnpmgr.dll", "umpo-overrides.dll", "umpo.dll",
+		     "umpoext.dll", "umpowmi.dll", "umrdp.dll", "unattend.dll",
+		     "unenrollhook.dll", "unimdmat.dll", "uniplat.dll",
+		     "unistore.dll", "untfs.dll", "updateagent.dll",
+		     "updatecsp.dll", "updatepolicy.dll", "upnp.dll",
+		     "upnphost.dll", "upshared.dll", "urefs.dll", "urefsv1.dll",
+		     "ureg.dll", "url.dll", "urlmon.dll", "usbcapi.dll",
+		     "usbceip.dll", "usbmon.dll", "usbperf.dll", "usbpmapi.dll",
+		     "usbtask.dll", "usbui.dll", "user32.dll", "usercpl.dll",
+		     "userdataservice.dll", "userdatatimeutil.dll", "userenv.dll",
+		     "userinitext.dll", "usermgr.dll", "usermgrcli.dll",
+		     "usermgrproxy.dll", "usoapi.dll", "usocoreps.dll",
+		     "usosvc.dll", "usp10.dll", "ustprov.dll", "utcutil.dll",
+		     "utildll.dll", "uudf.dll", "uvcmodel.dll", "uwfcfgmgmt.dll",
+		     "uwfcsp.dll", "uwfservicingapi.dll", "uxinit.dll", "uxlib.dll",
+		     "uxlibres.dll", "uxtheme.dll", "vac.dll", "van.dll",
+		     "vault.dll", "vaultcds.dll", "vaultcli.dll",
+		     "vaultroaming.dll", "vaultsvc.dll", "vbsapi.dll",
+		     "vbscript.dll", "vbssysprep.dll", "vcardparser.dll",
+		     "vdsbas.dll", "vdsdyn.dll", "vdsutil.dll", "vdsvd.dll",
+		     "vds_ps.dll", "verifier.dll", "vertdll.dll", "vfuprov.dll",
+		     "vfwwdm32.dll", "vhfum.dll", "vid.dll", "videohandlers.dll",
+		     "vidreszr.dll", "virtdisk.dll", "vmbuspipe.dll",
+		     "vmdevicehost.dll", "vmictimeprovider.dll", "vmrdvcore.dll",
+		     "voiprt.dll", "vpnike.dll", "vpnikeapi.dll",
+		     "vpnsohdesktop.dll", "vpnv2csp.dll", "vscmgrps.dll",
+		     "vssapi.dll", "vsstrace.dll", "vss_ps.dll", "w32time.dll",
+		     "w32topl.dll", "waasassessment.dll", "waasmediccapsule.dll",
+		     "waasmedicps.dll", "waasmedicsvc.dll", "wabsyncprovider.dll",
+		     "walletproxy.dll", "walletservice.dll", "wavemsp.dll",
+		     "wbemcomn.dll", "wbiosrvc.dll", "wci.dll", "wcimage.dll",
+		     "wcmapi.dll", "wcmcsp.dll", "wcmsvc.dll", "wcnapi.dll",
+		     "wcncsvc.dll", "wcneapauthproxy.dll", "wcneappeerproxy.dll",
+		     "wcnnetsh.dll", "wcnwiz.dll", "wc_storage.dll", "wdc.dll",
+		     "wdi.dll", "wdigest.dll", "wdscore.dll", "webauthn.dll",
+		     "webcamui.dll", "webcheck.dll", "webclnt.dll", "webio.dll",
+		     "webservices.dll", "websocket.dll", "wecapi.dll", "wecsvc.dll",
+		     "wephostsvc.dll", "wer.dll", "werconcpl.dll",
+		     "wercplsupport.dll", "werenc.dll", "weretw.dll", "wersvc.dll",
+		     "werui.dll", "wevtapi.dll", "wevtfwd.dll", "wevtsvc.dll",
+		     "wfapigp.dll", "wfdprov.dll", "wfdsconmgr.dll",
+		     "wfdsconmgrsvc.dll", "wfhc.dll", "whealogr.dll",
+		     "whhelper.dll", "wiaaut.dll", "wiadefui.dll", "wiadss.dll",
+		     "wiarpc.dll", "wiascanprofiles.dll", "wiaservc.dll",
+		     "wiashext.dll", "wiatrace.dll", "wificloudstore.dll",
+		     "wificonfigsp.dll", "wifidisplay.dll", "wimgapi.dll",
+		     "win32spl.dll", "win32u.dll", "winbio.dll",
+		     "winbiodatamodel.dll", "winbioext.dll", "winbrand.dll",
+		     "wincorlib.dll", "wincredprovider.dll", "wincredui.dll",
+		     "windowmanagement.dll", "windowscodecs.dll",
+		     "windowscodecsext.dll", "windowscodecsraw.dll",
+		     "windowsiotcsp.dll", "windowslivelogin.dll", "winethc.dll",
+		     "winhttp.dll", "winhttpcom.dll", "winhvemulation.dll",
+		     "winhvplatform.dll", "wininet.dll", "wininetlui.dll",
+		     "wininitext.dll", "winipcfile.dll", "winipcsecproc.dll",
+		     "winipsec.dll", "winlangdb.dll", "winlogonext.dll",
+		     "winmde.dll", "winml.dll", "winmm.dll", "winmmbase.dll",
+		     "winmsipc.dll", "winnlsres.dll", "winnsi.dll",
+		     "winreagent.dll", "winrnr.dll", "winrscmd.dll", "winrsmgr.dll",
+		     "winrssrv.dll", "winrttracing.dll", "winsatapi.dll",
+		     "winscard.dll", "winsetupui.dll", "winshfhc.dll", "winsku.dll",
+		     "winsockhc.dll", "winsqlite3.dll", "winsrpc.dll", "winsrv.dll",
+		     "winsrvext.dll", "winsta.dll", "winsync.dll",
+		     "winsyncmetastore.dll", "winsyncproviders.dll", "wintrust.dll",
+		     "wintypes.dll", "winusb.dll", "wirednetworkcsp.dll",
+		     "wisp.dll", "wkscli.dll", "wkspbrokerax.dll", "wksprtps.dll",
+		     "wkssvc.dll", "wlanapi.dll", "wlancfg.dll", "wlanconn.dll",
+		     "wlandlg.dll", "wlangpui.dll", "wlanhc.dll", "wlanhlp.dll",
+		     "wlanmediamanager.dll", "wlanmm.dll", "wlanmsm.dll",
+		     "wlanpref.dll", "wlanradiomanager.dll", "wlansec.dll",
+		     "wlansvc.dll", "wlansvcpal.dll", "wlanui.dll", "wlanutil.dll",
+		     "wldap32.dll", "wldp.dll", "wlgpclnt.dll", "wlidcli.dll",
+		     "wlidcredprov.dll", "wlidfdp.dll", "wlidnsp.dll",
+		     "wlidprov.dll", "wlidres.dll", "wlidsvc.dll", "wmadmod.dll",
+		     "wmadmoe.dll", "wmalfxgfxdsp.dll", "wmasf.dll",
+		     "wmcodecdspps.dll", "wmdmlog.dll", "wmdmps.dll",
+		     "wmdrmsdk.dll", "wmerror.dll", "wmi.dll", "wmiclnt.dll",
+		     "wmicmiplugin.dll", "wmidcom.dll", "wmidx.dll", "wmiprop.dll",
+		     "wmitomi.dll", "wmnetmgr.dll", "wmp.dll", "wmpdui.dll",
+		     "wmpdxm.dll", "wmpeffects.dll", "wmphoto.dll", "wmploc.dll",
+		     "wmpps.dll", "wmpshell.dll", "wmsgapi.dll", "wmspdmod.dll",
+		     "wmspdmoe.dll", "wmvcore.dll", "wmvdecod.dll", "wmvdspa.dll",
+		     "wmvencod.dll", "wmvsdecd.dll", "wmvsencd.dll", "wmvxencd.dll",
+		     "woftasks.dll", "wofutil.dll", "wordbreakers.dll",
+		     "workfoldersgpext.dll", "workfoldersres.dll",
+		     "workfoldersshell.dll", "workfolderssvc.dll", "wosc.dll",
+		     "wow64.dll", "wow64cpu.dll", "wow64win.dll", "wpbcreds.dll",
+		     "wpc.dll", "wpcapi.dll", "wpcdesktopmonsvc.dll",
+		     "wpcproxystubs.dll", "wpcrefreshtask.dll", "wpcwebfilter.dll",
+		     "wpdbusenum.dll", "wpdshext.dll", "wpdshserviceobj.dll",
+		     "wpdsp.dll", "wpd_ci.dll", "wpnapps.dll", "wpnclient.dll",
+		     "wpncore.dll", "wpninprc.dll", "wpnprv.dll", "wpnservice.dll",
+		     "wpnsruprov.dll", "wpnuserservice.dll", "wpportinglibrary.dll",
+		     "wpprecorderum.dll", "wptaskscheduler.dll", "wpx.dll",
+		     "ws2help.dll", "ws2_32.dll", "wscapi.dll", "wscinterop.dll",
+		     "wscisvif.dll", "wsclient.dll", "wscproxystub.dll",
+		     "wscsvc.dll", "wsdapi.dll", "wsdchngr.dll",
+		     "wsdprintproxy.dll", "wsdproviderutil.dll", "wsdscanproxy.dll",
+		     "wsecedit.dll", "wsepno.dll", "wshbth.dll", "wshcon.dll",
+		     "wshelper.dll", "wshext.dll", "wshhyperv.dll", "wship6.dll",
+		     "wshqos.dll", "wshrm.dll", "wshtcpip.dll", "wshunix.dll",
+		     "wslapi.dll", "wsmagent.dll", "wsmauto.dll", "wsmplpxy.dll",
+		     "wsmres.dll", "wsmsvc.dll", "wsmwmipl.dll", "wsnmp32.dll",
+		     "wsock32.dll", "wsplib.dll", "wsp_fs.dll", "wsp_health.dll",
+		     "wsp_sr.dll", "wtsapi32.dll", "wuapi.dll", "wuaueng.dll",
+		     "wuceffects.dll", "wudfcoinstaller.dll", "wudfplatform.dll",
+		     "wudfsmcclassext.dll", "wudfx.dll", "wudfx02000.dll",
+		     "wudriver.dll", "wups.dll", "wups2.dll", "wuuhext.dll",
+		     "wuuhosdeployment.dll", "wvc.dll", "wwaapi.dll", "wwaext.dll",
+		     "wwanapi.dll", "wwancfg.dll", "wwanhc.dll", "wwanprotdim.dll",
+		     "wwanradiomanager.dll", "wwansvc.dll", "wwapi.dll",
+		     "xamltilerender.dll", "xaudio2_8.dll", "xaudio2_9.dll",
+		     "xblauthmanager.dll", "xblgamesave.dll", "xblgamesaveext.dll",
+		     "xblgamesaveproxy.dll", "xboxgipsvc.dll",
+		     "xboxgipsynthetic.dll", "xboxnetapisvc.dll", "xinput1_4.dll",
+		     "xinput9_1_0.dll", "xinputuap.dll", "xmlfilter.dll",
+		     "xmllite.dll", "xmlprovi.dll", "xolehlp.dll",
+		     "xpsgdiconverter.dll", "xpsprint.dll", "xpspushlayer.dll",
+		     "xpsrasterservice.dll", "xpsservices.dll", "xwizards.dll",
+		     "xwreg.dll", "xwtpdui.dll", "xwtpw32.dll", "zipcontainer.dll",
+		     "zipfldr.dll", "bootsvc.dll", "halextintcpsedma.dll",
+		     "icsvcvss.dll", "ieproxydesktop.dll", "lsaadt.dll",
+		     "nlansp_c.dll", "nrtapi.dll", "opencl.dll", "pfclient.dll",
+		     "pnpdiag.dll", "prxyqry.dll", "rdpnanotransport.dll",
+		     "servicingcommon.dll", "sortwindows63.dll", "sstpcfg.dll",
+		     "tdhres.dll", "umpodev.dll", "utcapi.dll", "windlp.dll",
+		     "wow64base.dll", "wow64con.dll", "blbuires.dll", "bpainst.dll",
+		     "cbclient.dll", "certadm.dll", "certocm.dll", "certpick.dll",
+		     "csdeployres.dll", "dsdeployres.dll", "eapa3hst.dll",
+		     "eapacfg.dll", "eapahost.dll", "elsext.dll", "encdump.dll",
+		     "escmigplugin.dll", "fsclient.dll", "fsdeployres.dll",
+		     "fssminst.dll", "fssmres.dll", "fssprov.dll", "ipamapi.dll",
+		     "kpssvc.dll", "lbfoadminlib.dll", "mintdh.dll", "mmci.dll",
+		     "mmcico.dll", "mprsnap.dll", "mstsmhst.dll", "mstsmmc.dll",
+		     "muxinst.dll", "personax.dll", "rassfm.dll", "rasuser.dll",
+		     "rdmsinst.dll", "rdmsres.dll", "rtrfiltr.dll", "sacsvr.dll",
+		     "scrdenrl.dll", "sdclient.dll", "sharedstartmodel.dll",
+		     "smsrouter.dll", "spwizimg_svr.dll", "sqlcecompact40.dll",
+		     "sqlceoledb40.dll", "sqlceqp40.dll", "sqlcese40.dll",
+		     "srvmgrinst.dll", "svrmgrnc.dll", "tapisnap.dll",
+		     "tlsbrand.dll", "tsec.dll", "tsprop.dll",
+		     "tspubiconhelper.dll", "tssdjet.dll", "tsuserex.dll",
+		     "ualapi.dll", "ualsvc.dll", "umcres.dll", "updatehandlers.dll",
+		     "usocore.dll", "vssui.dll", "wsbappres.dll", "wsbonline.dll",
+		     "wsmselpl.dll", "wsmselrr.dll", "xpsfilt.dll", "xpsshhdr.dll"
+		     ) and     not (       (         dll.name : "icuuc.dll" and
+		     dll.code_signature.subject_name in (           "Valve", "Valve
+		     Corp.", "Avanquest Software (7270356 Canada Inc)", "Adobe Inc."
+		     ) and dll.code_signature.trusted == true       ) or       (
+		     dll.name : ("timeSync.dll", "appInfo.dll") and
+		     dll.code_signature.subject_name in (           "VMware Inc.",
+		     "VMware, Inc."         ) and dll.code_signature.trusted == true
+		     ) or       (         dll.name : "libcrypto.dll" and
+		     dll.code_signature.subject_name in (           "NoMachine
+		     S.a.r.l.", "Oculus VR, LLC"         ) and
+		     dll.code_signature.trusted == true       ) or       (
+		     dll.name : "ucrtbase.dll" and dll.code_signature.subject_name
+		     in (           "Proofpoint, Inc.", "Rapid7 LLC", "Eclipse.org
+		     Foundation, Inc.", "Amazon.com Services LLC", "Windows Phone"
+		     ) and dll.code_signature.trusted == true       ) or       (
+		     dll.name : ("libcrypto.dll", "wmi.dll", "geolocation.dll",
+		     "kerberos.dll") and         dll.code_signature.subject_name ==
+		     "Bitdefender SRL" and dll.code_signature.trusted == true
+		     ) or       (dll.name : "ICMP.dll" and
+		     dll.code_signature.subject_name == "Paessler AG" and
+		     dll.code_signature.trusted == true) or       (dll.name :
+		     "dbghelp.dll" and dll.code_signature.trusted == true) or
+		     (dll.name : "DirectML.dll" and dll.code_signature.subject_name
+		     == "Adobe Inc." and dll.code_signature.trusted == true) or
+		     (dll.name : "icsvc.dll" and dll.code_signature.subject_name in
+		     ("Dell Inc", "Dell Technologies Inc.") and
+		     dll.code_signature.trusted == true) or       (dll.name :
+		     "offreg.dll" and dll.code_signature.subject_name ==
+		     "Malwarebytes Inc." and dll.code_signature.trusted == true) or
+		     (dll.name : "AppMgr.dll" and dll.code_signature.subject_name ==
+		     "Autodesk, Inc" and dll.code_signature.trusted == true) or
+		     (dll.name : ("SsShim.dll", "Msi.dll", "wdscore.dll") and
+		     process.name : "DismHost.exe" and dll.path :
+		     "C:\\Windows\\Temp\\*") or       (         dll.path : (
+		     "?:\\Windows\\SystemApps\\*\\dxgi.dll",
+		     "?:\\Windows\\SystemApps\\*\\wincorlib.dll",
+		     "?:\\Windows\\dxgi.dll",
+		     "?:\\Users\\*\\AppData\\Local\\LINE\\bin\\current\\dbghelp.dll"
+		     )       )     )
+
+Name: Suspicious DLL Loaded for Persistence or Privilege Escalation
+	description: 
+		     Identifies the loading of a non Microsoft signed
+		     DLL that is missing on a default Windows install (phantom DLL)
+		     or one that can be loaded from a different location by a native
+		     Windows process. This may be abused to persist or elevate
+		     privileges via privileged file write vulnerabilities.
+	query: 
+		     any where host.os.type == "windows" and
+		     (event.category : ("driver", "library") or (event.category ==
+		     "process" and event.action : "Image loaded*")) and (   /*
+		     compatible with Elastic Endpoint Library Events */   (
+		     ?dll.name : (         "wlbsctrl.dll", "wbemcomn.dll",
+		     "WptsExtensions.dll", "Tsmsisrv.dll", "TSVIPSrv.dll",
+		     "Msfte.dll",         "wow64log.dll",
+		     "WindowsCoreDeviceInfo.dll", "Ualapi.dll", "wlanhlp.dll",
+		     "phoneinfo.dll", "EdgeGdi.dll",         "cdpsgshims.dll",
+		     "windowsperformancerecordercontrol.dll", "diagtrack_win.dll",
+		     "TPPCOIPW32.dll",          "tpgenlic.dll", "thinmon.dll",
+		     "fxsst.dll", "msTracer.dll"     )     and (
+		     ?dll.code_signature.trusted != true or
+		     ?dll.code_signature.exists != true or       (
+		     dll.code_signature.trusted == true and           not
+		     dll.code_signature.subject_name : ("Microsoft Windows",
+		     "Microsoft Corporation", "Microsoft Windows Publisher")       )
+		     ) or    /* oci.dll is too noisy due to unsigned Oracle related
+		     DLL loaded from random dirs */   (    (?dll.path :
+		     "?:\\Windows\\*\\oci.dll" and process.executable :
+		     "?:\\Windows\\*.exe" and      (?dll.code_signature.trusted !=
+		     true or ?dll.code_signature.exists != true)) or
+		     (file.path : "?:\\Windows\\*\\oci.dll" and not
+		     file.code_signature.status == "Valid" and process.executable :
+		     "?:\\Windows\\*.exe")    ) or     /* compatible with Sysmon
+		     EventID 7 - Image Load */   (file.name : ("wlbsctrl.dll",
+		     "wbemcomn.dll", "WptsExtensions.dll", "Tsmsisrv.dll",
+		     "TSVIPSrv.dll", "Msfte.dll",                "wow64log.dll",
+		     "WindowsCoreDeviceInfo.dll", "Ualapi.dll", "wlanhlp.dll",
+		     "phoneinfo.dll", "EdgeGdi.dll",
+		     "cdpsgshims.dll", "windowsperformancerecordercontrol.dll",
+		     "diagtrack_win.dll", "TPPCOIPW32.dll",
+		     "tpgenlic.dll", "thinmon.dll", "fxsst.dll", "msTracer.dll") and
+		     not file.hash.sha256 :              ("6e837794fc282446906c36d68
+		     1958f2f6212043fc117c716936920be166a700f",               "b14e49
+		     54e8cca060ffeb57f2458b6a3a39c7d2f27e94391cbcea5387652f21a4",
+		     "c258d90acd006fa109dc6b748008edbb196d6168bc75ace0de0de54a4db466
+		     62") and     not file.code_signature.status == "Valid")   ) and
+		     not   (     ?dll.path : (
+		     "?:\\Windows\\System32\\wbemcomn.dll",
+		     "?:\\Windows\\SysWOW64\\wbemcomn.dll",
+		     "?:\\Windows\\System32\\windowsperformancerecordercontrol.dll",
+		     "?:\\Windows\\System32\\wlanhlp.dll",
+		     "\\Device\\HarddiskVolume?\\Windows\\SysWOW64\\wbemcomn.dll",
+		     "\\Device\\HarddiskVolume?\\Windows\\System32\\wbemcomn.dll",
+		     "\\Device\\HarddiskVolume?\\Windows\\SysWOW64\\wlanhlp.dll",
+		     "\\Device\\HarddiskVolume?\\Windows\\System32\\wlanhlp.dll",
+		     "\\Device\\HarddiskVolume?\\Windows\\SysWOW64\\windowsperforman
+		     cerecordercontrol.dll",        "\\Device\\HarddiskVolume?\\Wind
+		     ows\\System32\\windowsperformancerecordercontrol.dll",        "
+		     C:\\ProgramData\\docker\\windowsfilter\\*\\Files\\Windows\\Syst
+		     em32\\windowsperformancerecordercontrol.dll",        "C:\\Progr
+		     amData\\docker\\windowsfilter\\*\\Files\\Windows\\System32\\win
+		     dowsperformancerecordercontrol.dll",
+		     "\\Device\\vmsmb\\VSMB-{*}\\os\\windows\\system32\\*.dll"     )
+		     or     file.path : (
+		     "?:\\Windows\\System32\\wbemcomn.dll",
+		     "?:\\Windows\\SysWOW64\\wbemcomn.dll",
+		     "?:\\Windows\\System32\\windowsperformancerecordercontrol.dll",
+		     "?:\\Windows\\System32\\wlanhlp.dll",        "C:\\ProgramData\\
+		     docker\\windowsfilter\\*\\Files\\Windows\\System32\\windowsperf
+		     ormancerecordercontrol.dll",        "C:\\ProgramData\\docker\\w
+		     indowsfilter\\*\\Files\\Windows\\System32\\wbemcomn.dll",
+		     "\\Device\\vmsmb\\VSMB-{*}\\os\\windows\\system32\\*.dll"     )
+		     ) )
+
+Name: Unsigned DLL Side-Loading from a Suspicious Folder
+	description: 
+		     Identifies a Windows trusted program running
+		     from locations often abused by adversaries to masquerade as a
+		     trusted program and loading a recently dropped DLL. This
+		     behavior may indicate an attempt to evade defenses via side-
+		     loading a malicious DLL within the memory space of a signed
+		     processes.
+	query: 
+		     library where host.os.type == "windows" and
+		     process.code_signature.trusted == true and
+		     (dll.Ext.relative_file_creation_time <= 500 or
+		     dll.Ext.relative_file_name_modify_time <= 500) and    not
+		     dll.code_signature.status : ("trusted", "errorExpired",
+		     "errorCode_endpoint*", "errorChaining") and        /*
+		     Suspicious Paths */       dll.path : ("?:\\PerfLogs\\*.dll",
+		     "?:\\Users\\*\\Pictures\\*.dll",
+		     "?:\\Users\\*\\Music\\*.dll",
+		     "?:\\Users\\Public\\*.dll",
+		     "?:\\Users\\*\\Documents\\*.dll",
+		     "?:\\Windows\\Tasks\\*.dll",
+		     "?:\\Windows\\System32\\Tasks\\*.dll",
+		     "?:\\Intel\\*.dll",                   "?:\\AMD\\Temp\\*.dll",
+		     "?:\\Windows\\AppReadiness\\*.dll",
+		     "?:\\Windows\\ServiceState\\*.dll",
+		     "?:\\Windows\\security\\*.dll",
+		     "?:\\Windows\\System\\*.dll",
+		     "?:\\Windows\\IdentityCRL\\*.dll",
+		     "?:\\Windows\\Branding\\*.dll",
+		     "?:\\Windows\\csc\\*.dll",
+		     "?:\\Windows\\DigitalLocker\\*.dll",
+		     "?:\\Windows\\en-US\\*.dll",
+		     "?:\\Windows\\wlansvc\\*.dll",
+		     "?:\\Windows\\Prefetch\\*.dll",
+		     "?:\\Windows\\Fonts\\*.dll",
+		     "?:\\Windows\\diagnostics\\*.dll",
+		     "?:\\Windows\\TAPI\\*.dll",
+		     "?:\\Windows\\INF\\*.dll",
+		     "?:\\windows\\tracing\\*.dll",
+		     "?:\\windows\\IME\\*.dll",
+		     "?:\\Windows\\Performance\\*.dll",
+		     "?:\\windows\\intel\\*.dll",
+		     "?:\\windows\\ms\\*.dll",
+		     "?:\\Windows\\dot3svc\\*.dll",
+		     "?:\\Windows\\ServiceProfiles\\*.dll",
+		     "?:\\Windows\\panther\\*.dll",
+		     "?:\\Windows\\RemotePackages\\*.dll",
+		     "?:\\Windows\\OCR\\*.dll",
+		     "?:\\Windows\\appcompat\\*.dll",
+		     "?:\\Windows\\apppatch\\*.dll",
+		     "?:\\Windows\\addins\\*.dll",
+		     "?:\\Windows\\Setup\\*.dll",
+		     "?:\\Windows\\Help\\*.dll",
+		     "?:\\Windows\\SKB\\*.dll",
+		     "?:\\Windows\\Vss\\*.dll",
+		     "?:\\Windows\\Web\\*.dll",
+		     "?:\\Windows\\servicing\\*.dll",
+		     "?:\\Windows\\CbsTemp\\*.dll",
+		     "?:\\Windows\\Logs\\*.dll",
+		     "?:\\Windows\\WaaS\\*.dll",
+		     "?:\\Windows\\twain_32\\*.dll",
+		     "?:\\Windows\\ShellExperiences\\*.dll",
+		     "?:\\Windows\\ShellComponents\\*.dll",
+		     "?:\\Windows\\PLA\\*.dll",
+		     "?:\\Windows\\Migration\\*.dll",
+		     "?:\\Windows\\debug\\*.dll",
+		     "?:\\Windows\\Cursors\\*.dll",
+		     "?:\\Windows\\Containers\\*.dll",
+		     "?:\\Windows\\Boot\\*.dll",
+		     "?:\\Windows\\bcastdvr\\*.dll",
+		     "?:\\Windows\\TextInput\\*.dll",
+		     "?:\\Windows\\schemas\\*.dll",
+		     "?:\\Windows\\SchCache\\*.dll",
+		     "?:\\Windows\\Resources\\*.dll",
+		     "?:\\Windows\\rescache\\*.dll",
+		     "?:\\Windows\\Provisioning\\*.dll",
+		     "?:\\Windows\\PrintDialog\\*.dll",
+		     "?:\\Windows\\PolicyDefinitions\\*.dll",
+		     "?:\\Windows\\media\\*.dll",
+		     "?:\\Windows\\Globalization\\*.dll",
+		     "?:\\Windows\\L2Schemas\\*.dll",
+		     "?:\\Windows\\LiveKernelReports\\*.dll",
+		     "?:\\Windows\\ModemLogs\\*.dll",
+		     "?:\\Windows\\ImmersiveControlPanel\\*.dll",
+		     "?:\\$Recycle.Bin\\*.dll") and           /* DLL loaded from the
+		     process.executable current directory */
+		     endswith~(substring(dll.path, 0, length(dll.path) -
+		     (length(dll.name) + 1)), substring(process.executable, 0,
+		     length(process.executable) - (length(process.name) + 1)))
+
+Name: Potential DLL Side-Loading via Trusted Microsoft Programs
+	description: 
+		     Identifies an instance of a Windows trusted
+		     program that is known to be vulnerable to DLL Search Order
+		     Hijacking starting after being renamed or from a non-standard
+		     path. This is uncommon behavior and may indicate an attempt to
+		     evade defenses via side loading a malicious DLL within the
+		     memory space of one of those processes.
+	query: 
+		     process where host.os.type == "windows" and event.type
+		     == "start" and   process.pe.original_file_name in
+		     ("WinWord.exe", "EXPLORER.EXE", "w3wp.exe", "DISM.EXE") and
+		     not (process.name : ("winword.exe", "explorer.exe", "w3wp.exe",
+		     "Dism.exe") or          process.executable :
+		     ("?:\\Windows\\explorer.exe",
+		     "?:\\Program Files\\Microsoft
+		     Office\\root\\Office*\\WINWORD.EXE",
+		     "?:\\Program Files?(x86)\\Microsoft
+		     Office\\root\\Office*\\WINWORD.EXE",
+		     "?:\\Windows\\System32\\Dism.exe",
+		     "?:\\Windows\\SysWOW64\\Dism.exe",
+		     "?:\\Windows\\System32\\inetsrv\\w3wp.exe")          )
+
+Name: Potential Credential Access via Renamed COM+ Services DLL
+	description: 
+		     Identifies suspicious renamed COMSVCS.DLL Image
+		     Load, which exports the MiniDump function that can be used to
+		     dump a process memory. This may indicate an attempt to dump
+		     LSASS memory while bypassing command-line based detection in
+		     preparation for credential access.
+	query: 
+		     sequence by process.entity_id with maxspan=1m
+		     [process where host.os.type == "windows" and event.category ==
+		     "process" and     process.name : "rundll32.exe"]  [process
+		     where host.os.type == "windows" and event.category == "process"
+		     and event.dataset : "windows.sysmon_operational" and event.code
+		     == "7" and    (file.pe.original_file_name : "COMSVCS.DLL" or
+		     file.pe.imphash : "EADBCCBB324829ACB5F2BBE87E5549A8") and
+		     /* renamed COMSVCS */     not file.name : "COMSVCS.DLL"]
+
+None
