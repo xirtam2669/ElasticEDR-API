@@ -10,7 +10,7 @@ class ElasticEDRClient:
         self.API_key: str = ""#insert api key
         
         self.params: dict = {
-        "per_page": 100,  
+        "per_page": 1400,  
         "page": 1,
         }
         
