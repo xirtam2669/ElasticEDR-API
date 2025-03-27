@@ -1,10 +1,8 @@
 #!/bin/python3
 import requests
-import json
 import textwrap
 
 class ElasticEDRClient:
-
     def __init__(
         self,
     ):
@@ -22,18 +20,15 @@ class ElasticEDRClient:
         }
 
         self.tags = {}
-
-
 ################################################### OUTPUT FORMATTING ###################################################
     def create_tag_dict(self, rule, key_list):
         #Takes in list of keys to customize output
         #Creats a dictionary of keys, that correspond to formatted values from the response
-
         self.tags = {"Name": f"Name: {rule['name']}"}
     
         for key in key_list:
             self.tags.update({key: self.wrap_text(rule, key)})
-
+            
     def wrap_text(self, rule, key):
         #Formats output text
 
@@ -57,16 +52,14 @@ class ElasticEDRClient:
         return output_string
 ###########################################################################################################################
 
-    def list_all_rules(self, keys_list, filter_key=None, sort_by=None):
+    def list_all_rules(self, keys_list, filter_key=None,):
         request = "detection_engine/rules/_find"
-    
         params = self.params.copy()
 
         if(not filter_key):
            pass
         else:
             params["filter"] = f"{filter_key}"
-
 
         try:
             response = requests.get(self.url + request, headers=self.headers, params=params)
@@ -81,59 +74,6 @@ class ElasticEDRClient:
                     print(self.enumerate_rule_response(rule, keys_list))
                 except KeyError as e:
                         pass
-                        # missing_key = str(e).strip("'")
-                        # cleaned_keys = [k for k in keys_list if k != missing_key]
-                        # print(self.enumerate_rule_response(rule, cleaned_keys))
         else:
             print("Error:", response.status_code)
             print(response.text)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # params = {
-    #     "per_page": 100,  
-    #     "page": 1,
-    #     "filter": "alert.attributes.name:DLL"   
-    # }
-
-    # response = requests.get(url, headers=headers, params=params)
-
-    # if response.status_code == 200:
-    #     data = response.json()
-    #     print(f"Rules Found: {data['total']}")
-    #     for rule in data['data']:
-    #         print(f"- {rule['name']} (ID: {rule['rule_id']})")
-    # else:
-    #     print("Error:", response.status_code)
-    #     print(response.text)
-
-
-    # def
